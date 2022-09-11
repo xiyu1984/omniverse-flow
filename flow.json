@@ -1,0 +1,106 @@
+{
+  "emulators": {
+    "default": {
+      "port": 3569,
+      "serviceAccount": "emulator-account"
+    }
+  },
+  "testnet": {
+    "default": {
+      "port": 9000,
+      "serviceAccount": "testnet-account"
+    }
+  },
+  "contracts": {
+    "FungibleToken": "./contracts/utility/FungibleToken.cdc",
+	  "NonFungibleToken": "./contracts/NonFungibleToken.cdc",
+	  "MetadataViews": "./contracts/MetadataViews.cdc",
+    "ExampleNFT": "./contracts/ExampleNFT.cdc",
+    "OmniverseNFT": "./contracts/OmniverseNFT.cdc"
+  },
+  "networks": {
+    "emulator": "127.0.0.1:3569",
+    "mainnet": "access.mainnet.nodes.onflow.org:9000",
+    "testnet": "access.devnet.nodes.onflow.org:9000"
+  },
+  "accounts": {
+    "emulator-account": {
+      "address": "0xf8d6e0586b0a20c7",
+      "publicKey": "bb499b3527649d37f86d4a16e83aae2f9bd64de510077cf8c5fcb12eafc96c93a0425ac965ce4eb2cc2dd5a350569f10035b4308aadfc544415ddc812f919025",
+      "key": "69e7e51ead557351ade7a575e947c4d4bd19dd8a6cdf00c51f9c7f6f721b72dc"
+    },
+    "emulator-Alice": {
+			"address": "0x01cf0e2f2f715450",
+			"publicKey": "81262aa27f1630ccf1293300e8e1d9a6ba542dffa796b860d53873867175e9d31bd7b7581d2f200f9c3dfdbc10ae912ff036946981e3d8996a14f186d20e3e2f",
+			"key": "c9193930b34dd498378e36c35118a627d9eb500f6fd69b16d8e59db7cc8f5bb3"
+		},
+    "testnet-account": {
+      "address": "0x4f85d5a5afe243d3",
+      "publicKey": "bb499b3527649d37f86d4a16e83aae2f9bd64de510077cf8c5fcb12eafc96c93a0425ac965ce4eb2cc2dd5a350569f10035b4308aadfc544415ddc812f919025",
+      "key": "69e7e51ead557351ade7a575e947c4d4bd19dd8a6cdf00c51f9c7f6f721b72dc"
+    },
+    "testnet-subone" : {
+			"address": "0xd77db11694592a2b",
+			"key": "4b383a4cb339cc79f77b5a06fba1012944b041c2956146e737d76293ce2783bd"
+		},
+		"testnet-subtwo" : {
+			"address": "0xa75346d2c919b743",
+			"key": "b791e604857282cf4c9814131ee6710981c217b48af826ad088db690b454490b"
+		},
+		"testnet-Alice" : {
+			"address": "0x05ede3f803407aae",
+			"Public Key": "4ac9795f2a91f84b64d35eedbd482e729a32fdc9743ff39f9716b04d42df820cd1d8e0433f07d0adcf577a82f666f09624a7e1d45524247bafeb28152ea3f2cf",
+			"key": "652563200c22afa575fba28149d3170184a9c64e66888e59ae7595779c72e66c"
+		},
+		"testnet-Bob" : {
+			"address": "0x1a478a7149935b63",
+			"Public Key": "df0118a59d779d2a0e6b056e62ede00485152aa1f33068092aadf3deb3f538d88920d0c8f500e9bc643a3de12ce3659a54961d11ade93717523cc9112a582a40",
+			"key": "2da6119819ed8f2a74a4fa9eb36ed81245f7444081e401aa10146670891fbac5"
+		},
+		"testnet-Carlo" : {
+			"address": "0x934cc6f3a49924f1",
+			"Public Key": "b9bb3e6f40b3b754e7f1ee18bba8136c0421846e195f54a2662a59b5abaa383b766fb330c436f5aa0e7364966f45cd182d827c58b2fbe0d0c8a44f33caa8f1ad",
+			"key": "54bc1f263ce2b2d6cf61879c6ddf60bac6f414a09f88580e9ba64c309c9d4f05"
+		},
+		"testnet-Davy" : {
+			"address": "0xa8913f4f31ead2ee",
+			"Public Key": "579246cad15865f4537d6ef83e3ae6b1ebe365b1feb5fa63d3536855f3fda642669d111330afceb53495ffaf617d095b881bcab3ae13ce2dd0a12a9384a7a07e",
+			"key": "eee23a6d3c3c853d42c0ba71c94cdc982b22d9c940ad8a90dc497a85ac534994"
+		},
+		"testnet-Eason" : {
+			"address": "0x5f37faed5f558aca",
+			"Public Key": "0d7ebc326d4b8df0b0290135688ad3822db1d41899a290d138c39d2ff990d7e1c524b015ecacd3c309b7c13f4a879c56c6f735e7904c601503ab4613b29efec3",
+			"key": "89c292ef9656a3767f4867befc355fd445ad90be8ceeef358ed84d829d2ecffd"
+		},
+    "testnet-Frank" : {
+			"address": "0x3c03aba355023006",
+			"key": {
+				"type": "hex",
+				"index": 0,
+				"privateKey": "d9fb0917e1d83e2d42f14f6ac5588e755901150f0aa0953bbf529752e786f50c",
+				"signatureAlgorithm": "ECDSA_secp256k1",
+				"hashAlgorithm": "SHA2_256"
+			}
+		}
+  },
+  "deployments": {
+    "emulator": {
+      "emulator-account": [
+        "FungibleToken", 
+        "NonFungibleToken",
+        "MetadataViews",
+        "ExampleNFT",
+        "OmniverseNFT"
+      ]
+    },
+    "testnet": {
+      "testnet-Eason": [
+        "FungibleToken", 
+        "NonFungibleToken",
+        "MetadataViews",
+        "ExampleNFT",
+        "OmniverseNFT"
+      ]
+    }
+  }
+}
