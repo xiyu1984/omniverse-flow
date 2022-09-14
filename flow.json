@@ -16,7 +16,10 @@
 	  "NonFungibleToken": "./contracts/NonFungibleToken.cdc",
 	  "MetadataViews": "./contracts/MetadataViews.cdc",
     "ExampleNFT": "./contracts/ExampleNFT.cdc",
-    "OmniverseNFT": "./contracts/OmniverseNFT.cdc"
+    "ExampleToken": "./contracts/ExampleToken.cdc",
+    "OmniverseNFT": "./contracts/OmniverseNFT.cdc",
+    "OmniverseFungible": "./contracts/OmniverseFungible.cdc", 
+    "OmniverseProtocol": "./contracts/OmniverseProtocol.cdc"
   },
   "networks": {
     "emulator": "127.0.0.1:3569",
@@ -90,7 +93,10 @@
         "NonFungibleToken",
         "MetadataViews",
         "ExampleNFT",
-        "OmniverseNFT"
+        "ExampleToken",
+        "OmniverseNFT",
+        "OmniverseProtocol",
+        "OmniverseFungible"
       ]
     },
     "testnet": {
@@ -99,7 +105,10 @@
         "NonFungibleToken",
         "MetadataViews",
         "ExampleNFT",
-        "OmniverseNFT"
+        "ExampleToken",
+        "OmniverseNFT",
+        "OmniverseProtocol",
+        "OmniverseFungible"
       ]
     }
   }
