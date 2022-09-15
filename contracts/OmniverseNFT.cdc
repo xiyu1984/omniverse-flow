@@ -332,7 +332,7 @@ pub contract OmniverseNFT: NonFungibleToken {
                     //let oldToken <- self.ownedNFTs[omniverse.omniID] <- omniverseNFT;
                     // emit Deposit(id: id, to: self.owner?.address)
                     //destroy oldToken;
-                    omniverseNFT.setLockedTime();
+                    //omniverseNFT.setLockedTime();
                     OmniverseNFT.addPendingNFT(recvIdentity: omniverse.recver!, nft: <- omniverseNFT);
 
                     // update omniverse state
@@ -389,7 +389,7 @@ pub contract OmniverseNFT: NonFungibleToken {
                 // get the OmniverseNFT out
                 let token <- self.ownedNFTs.remove(key: omniverse.omniID) ?? panic("missing NFT")
                 let omniverseToken <- (token as! @OmniverseNFT.NFT);
-                omniverseToken.setLockedTime();
+                //omniverseToken.setLockedTime();
                 OmniverseNFT.addExtractNFT(recvIdentity: omniverse.recver!, nft: <- omniverseToken);
 
                 // update omniverse state
@@ -456,7 +456,7 @@ pub contract OmniverseNFT: NonFungibleToken {
                 }
                 */
                 let omniverseToken <- (token as! @OmniverseNFT.NFT);
-                omniverseToken.setLockedTime();
+                //omniverseToken.setLockedTime();
                 OmniverseNFT.addPendingNFT(recvIdentity: omniverse.recver!, nft: <- omniverseToken);
 
                 // update omniverse state
@@ -664,6 +664,7 @@ pub contract OmniverseNFT: NonFungibleToken {
     }
 
     access(contract) fun addPendingNFT(recvIdentity: [UInt8], nft: @OmniverseNFT.NFT) {
+        nft.setLockedTime();
         let recvStr = String.encodeHex(recvIdentity);
         if let shelter = (&self.NFTShelter[recvStr] as &[OmniverseNFT.NFT]?) {
             shelter.append(<- nft);
@@ -673,6 +674,7 @@ pub contract OmniverseNFT: NonFungibleToken {
     }
 
     access(contract) fun addExtractNFT(recvIdentity: [UInt8], nft: @OmniverseNFT.NFT) {
+        nft.setLockedTime();
         let recvStr = String.encodeHex(recvIdentity);
         if let starPort = (&self.StarPort[recvStr] as &[OmniverseNFT.NFT]?) {
             starPort.append(<- nft);
@@ -735,10 +737,6 @@ pub contract OmniverseNFT: NonFungibleToken {
             panic("Unauthority Data!");
         }
 
-        //////////////////////////////////////////////////////////
-        // TODO: reward off-chain nodes
-        //////////////////////////////////////////////////////////
-
         let opStr = String.encodeHex(opIdentity);
         if let rc = (&self.publishedRecorder[opStr] as &OmniverseNFT.RecordedCertificate?) {
             let historyTx = rc.publishedTx[tx.oNFTProtocol.nonce];
@@ -751,6 +749,11 @@ pub contract OmniverseNFT: NonFungibleToken {
                 // take the NFT into prisons
                 let recverIdentity = historyTx.oNFTProtocol.recver!;
                 self.lockedUpInPrison(tx: historyTx);
+
+                //////////////////////////////////////////////////////////
+                // TODO: reward off-chain nodes as they found confilicts
+                //////////////////////////////////////////////////////////
+
                 return false;
             } else {
                 return true;

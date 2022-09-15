@@ -12,13 +12,14 @@
     }
   },
   "contracts": {
+    "BasicUtility": "./contracts/utility/BasicUtility.cdc",
     "FungibleToken": "./contracts/utility/FungibleToken.cdc",
 	  "NonFungibleToken": "./contracts/NonFungibleToken.cdc",
 	  "MetadataViews": "./contracts/MetadataViews.cdc",
     "ExampleNFT": "./contracts/ExampleNFT.cdc",
     "ExampleToken": "./contracts/ExampleToken.cdc",
     "OmniverseNFT": "./contracts/OmniverseNFT.cdc",
-    "OmniverseFungible": "./contracts/OmniverseFungible.cdc", 
+    "SkyWalkerFoungible": "./contracts/SkyWalkerFoungible.cdc", 
     "OmniverseProtocol": "./contracts/OmniverseProtocol.cdc"
   },
   "networks": {
@@ -89,6 +90,7 @@
   "deployments": {
     "emulator": {
       "emulator-account": [
+        "BasicUtility",
         "FungibleToken", 
         "NonFungibleToken",
         "MetadataViews",
@@ -96,11 +98,12 @@
         "ExampleToken",
         "OmniverseNFT",
         "OmniverseProtocol",
-        "OmniverseFungible"
+        "SkyWalkerFoungible"
       ]
     },
     "testnet": {
       "testnet-Eason": [
+        "BasicUtility",
         "FungibleToken", 
         "NonFungibleToken",
         "MetadataViews",
@@ -108,7 +111,7 @@
         "ExampleToken",
         "OmniverseNFT",
         "OmniverseProtocol",
-        "OmniverseFungible"
+        "SkyWalkerFoungible"
       ]
     }
   }
