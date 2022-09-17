@@ -33,25 +33,21 @@ pub contract OmniverseProtocol {
 
         pub fun getLockedTime(): UFix64;
 
-        // NFT is the omniverse id
-        // FT is the uuid
-        //pub fun getOmniID(): UInt64;
-    }
-
-    pub resource interface OmniverseNFT {
-        access(account) fun extract(): @AnyResource{OmniverseNFT};
-    }
-
-    pub resource interface OmniverseFoungible {
+        pub fun omniverseTransfer(txData: AnyStruct{OmniverseTokenProtocol}, signature: [UInt8]);
         pub fun omniverseApproveOut(txData: AnyStruct{OmniverseTokenProtocol}, 
                                                     signature: [UInt8]);
         pub fun omniverseTransferIn(txData: AnyStruct{OmniverseProtocol.OmniverseTokenProtocol}, 
                                                     signature: [UInt8]);
+
+        access(account) fun omniverseSettle(omniToken: @AnyResource{OmniverseToken});
     }
 
-    pub resource interface OmniversePublic {
-        pub fun omniverseTransfer(omniverse: AnyStruct{OmniverseTokenProtocol}, signature: [UInt8]);
-        access(account) fun omniverseExecute(omniToken: @AnyResource{OmniverseToken});
+    pub resource interface OmniverseNFTPublic {
+        access(account) fun extract(): @AnyResource{OmniverseNFTPublic};
+    }
+
+    pub resource interface OmniverseFungiblePublic {
+        
     }
 
     pub struct interface OmniverseTokenProtocol {
@@ -63,9 +59,9 @@ pub contract OmniverseProtocol {
 
         pub let sender: [UInt8]?;
         pub let recver: [UInt8]?;
-        // 0: Omniverse TransferFrom(like deposit)
-        // 1: Transfer
-        // 2: Omniverse Approve(like withdraw)
+        // 0: Omniverse Transfer in(like deposit)
+        // 1: Omniverse Transfer
+        // 2: Omniverse Approve out(like withdraw)
         pub let operation: UInt8;
 
         pub fun toBytesExceptNonce(): [UInt8];
@@ -216,15 +212,15 @@ pub contract OmniverseProtocol {
         self.lockPeriod = 10.0 * 60.0;
     }
 
-    pub fun getOmniversePublicCollection(addr: Address): &{OmniversePublic} {
+    pub fun getOmniversePublicCollection(addr: Address): &{OmniverseToken} {
         let pubAcct = getAccount(addr);
-        let cpRef = pubAcct.getCapability<&{OmniversePublic}>(self.CollectionPublicPath).borrow()!;
+        let cpRef = pubAcct.getCapability<&{OmniverseToken}>(self.CollectionPublicPath).borrow()!;
         return cpRef;
     }
 
-    pub fun getOmniversePublicVault(addr: Address): &{OmniversePublic} {
+    pub fun getOmniversePublicVault(addr: Address): &{OmniverseToken} {
         let pubAcct = getAccount(addr);
-        let cpRef = pubAcct.getCapability<&{OmniversePublic}>(self.VaultPublicPath).borrow()!;
+        let cpRef = pubAcct.getCapability<&{OmniverseToken}>(self.VaultPublicPath).borrow()!;
         return cpRef;
     }
 

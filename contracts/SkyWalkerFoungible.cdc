@@ -103,7 +103,7 @@ pub contract SkyWalkerFoungible: FungibleToken {
     ///
     /// The resource that contains the functions to send and receive tokens.
     ///
-    pub resource Vault: FungibleToken.Provider, FungibleToken.Receiver, FungibleToken.Balance, OmniverseProtocol.OmniverseToken, OmniverseProtocol.OmniverseFoungible {
+    pub resource Vault: FungibleToken.Provider, FungibleToken.Receiver, FungibleToken.Balance, OmniverseProtocol.OmniverseToken, OmniverseProtocol.OmniverseFungiblePublic {
 
         // The declaration of a concrete type in a contract interface means that
         // every Fungible Token contract that implements the FungibleToken interface
@@ -221,7 +221,7 @@ pub contract SkyWalkerFoungible: FungibleToken {
             return <- omniverseVault;
         }
 
-        // omniverse in
+        // omniverse transfer in
         // @param from: a omniverse vault(balance: ignored, omniverseBalance > 0)
         priv fun _omniverse_transfer_in(from: @Vault) {
             pre {
@@ -240,11 +240,30 @@ pub contract SkyWalkerFoungible: FungibleToken {
             self.omniverseBalance = self.omniverseBalance + omniverseVault.omniverseBalance;
             destroy omniverseVault;
         }
-        
+
+        // omniverse transfer out
+        // @returns: a omniverse vault(balance: ignored, omniverseBalance > 0)
+        priv fun _omniverse_transfer_out(amount: UFix64): @Vault {
+            pre {
+                (self.omniverseBalance > amount) && (amount > 0.0): 
+                    "Not enough omniverse balance to be approved out!"
+            }
+            post {
+                self.balance == before(self.balance):
+                    "balance cannot be changed in `_omniverse_approve_out`"
+            }
+
+            self.omniverseBalance = self.omniverseBalance - amount;
+            let omniverseToken <- create Vault(balance: 0.0);
+            omniverseToken._set_omniverse_balance(omniverseBalance: amount);
+            return <- omniverseToken;
+        }
+
         ////////////////////////////////////////////////////////////////////
-        // approve out
-        pub fun omniverseApproveOut(txData: AnyStruct{OmniverseProtocol.OmniverseTokenProtocol}, 
-                                                    signature: [UInt8]) {
+        // public part of omniverse process
+        priv fun _check_and_exec(txData: AnyStruct{OmniverseProtocol.OmniverseTokenProtocol}, 
+                                    signature: [UInt8], 
+                                    _exec_fun: ((OmniverseFoungible): Bool) ) {
             let omniverse = txData as! OmniverseFoungible;
 
             // check if the input tx is for the allowed contracts
@@ -257,11 +276,6 @@ pub contract SkyWalkerFoungible: FungibleToken {
             OmniverseProtocol.checkValid(opAddressOnFlow: opAddressOnFlow);
 
             let pk = OmniverseProtocol.getPublicKey(address: opAddressOnFlow, signatureAlgorithm: SignatureAlgorithm.ECDSA_secp256k1);
-            
-            // check operation
-            if omniverse.operation != 2 {
-                panic("Invalid operation. Need `2` for `approve out`. Got: ".concat(omniverse.operation.toString()))
-            }
 
             // check the owner has the permission to operate the tx
             let omniOpIdentity = omniverse.getOperateIdentity();
@@ -286,33 +300,120 @@ pub contract SkyWalkerFoungible: FungibleToken {
                     panic("Transaction locking has not cooled down!")
                 }
 
-                // get the OmniverseNFT out
-                let omniverseToken <- self._omniverse_approve_out(amount: omniverse.amount);
-                let publishedTx = OmniverseProtocol.OmniverseTx(txData: omniverse, signature: signature, uuid: omniverseToken.uuid);
-                
-                if omniverse.chainid == OmniverseProtocol.FlowChainID {
-                    // the tx is promoted first on Flow
-                    OmniverseProtocol.addExtractToken(recvIdentity: omniverse.recver!, token: <- omniverseToken);
-                } else {
-                    // the tx is promoted first on other chains, and this is a sychronous message
-                    OmniverseProtocol.addExtractToken(recvIdentity: OmniverseProtocol.black_hole_pk, token: <- omniverseToken);
+                // execute operation
+                if !_exec_fun(omniverse) {
+                    panic("execute transaction failed!");
                 }
-                // update omniverse state
-                OmniverseProtocol.addOmniverseTx(pubAddr:opAddressOnFlow, omniverseTx: publishedTx);
+
             } else if workingNonce > omniverse.nonce {
                 // This is a history transaction and check conflicts
                 let publishedTx = OmniverseProtocol.OmniverseTx(txData: omniverse, signature: signature, uuid: nil);
                 OmniverseProtocol.checkConflict(tx: publishedTx);
             } else {
                 panic("Mismatched input nonce and working nonce!");
-            }
+            }                                            
+        }
+        
+        ////////////////////////////////////////////////////////////////////
+        // omniverse approve out
+        pub fun omniverseApproveOut(txData: AnyStruct{OmniverseProtocol.OmniverseTokenProtocol}, 
+                                                    signature: [UInt8]) {
+
+            let opAddressOnFlow = self.owner!.address;
+            let vaultRef = &self as! & Vault;
+
+            let execFun = fun (omniverse: OmniverseFoungible) : Bool {
+                // check operation
+                if omniverse.operation != 2 {
+                    panic("Invalid operation. Need `2` for `omniverse approve out`. Got: ".concat(omniverse.operation.toString()))
+                }
+
+                // get the OmniverseToken out
+                let localToken <- vaultRef._omniverse_approve_out(amount: omniverse.amount);
+                let publishedTx = OmniverseProtocol.OmniverseTx(txData: omniverse, signature: signature, uuid: localToken.uuid);
+                
+                if omniverse.chainid == OmniverseProtocol.FlowChainID {
+                    // the tx is promoted first on Flow
+                    OmniverseProtocol.addExtractToken(recvIdentity: omniverse.recver!, token: <- localToken);
+                } else {
+                    // the tx is promoted first on other chains, and this is a sychronous message
+                    destroy localToken;
+                    //OmniverseProtocol.addExtractToken(recvIdentity: OmniverseProtocol.black_hole_pk, token: <- localToken);
+                }
+                // update omniverse state
+                OmniverseProtocol.addOmniverseTx(pubAddr:opAddressOnFlow, omniverseTx: publishedTx);
+                
+                return true;
+            };
+
+            self._check_and_exec(txData: txData, 
+                                    signature: signature,
+                                    _exec_fun: execFun);
         }
 
         ////////////////////////////////////////////////////////////////////
-        // transfer in
+        // omniverse transfer in
         pub fun omniverseTransferIn(txData: AnyStruct{OmniverseProtocol.OmniverseTokenProtocol}, 
                                                     signature: [UInt8]) {
+            
+            let opAddressOnFlow = self.owner!.address;
+            let vaultRef = &self as! & Vault;
 
+            let execFun = fun (omniverse: OmniverseFoungible) : Bool {
+                // check operation
+                if omniverse.operation != 0 {
+                    panic("Invalid operation. Need `0` for `omniverse transfer in`. Got: ".concat(omniverse.operation.toString()))
+                }
+
+                if omniverse.chainid == OmniverseProtocol.FlowChainID {
+                    // promote first on flow
+                    let omniverseToken <- vaultRef._local_approve_out(amount: omniverse.amount);
+                    let publishedTx = OmniverseProtocol.OmniverseTx(txData: omniverse, signature: signature, uuid: omniverseToken.uuid);
+                    OmniverseProtocol.addPendingToken(recvIdentity: omniverse.recver!, token: <- omniverseToken);
+                    OmniverseProtocol.addOmniverseTx(pubAddr:opAddressOnFlow, omniverseTx: publishedTx);
+
+                } else {
+                    // promote first on other chain
+                    let publishedTx = OmniverseProtocol.OmniverseTx(txData: omniverse, signature: signature, uuid: nil);
+                    OmniverseProtocol.addOmniverseTx(pubAddr:opAddressOnFlow, omniverseTx: publishedTx);
+
+                }
+                
+                return true;
+            };
+
+            self._check_and_exec(txData: txData, 
+                                    signature: signature,
+                                    _exec_fun: execFun);
+        }
+
+        ////////////////////////////////////////////////////////////////////
+        // omniverse transfer
+        pub fun omniverseTransfer(txData: AnyStruct{OmniverseProtocol.OmniverseTokenProtocol}, signature: [UInt8]){
+            let opAddressOnFlow = self.owner!.address;
+            let vaultRef = &self as! & Vault;
+
+            let execFun = fun (omniverse: OmniverseFoungible) : Bool {
+                // check operation
+                if omniverse.operation != 1 {
+                    panic("Invalid operation. Need `1` for `transfer`. Got: ".concat(omniverse.operation.toString()))
+                }
+
+                let omniverseToken <- vaultRef._omniverse_transfer_out(amount: omniverse.amount);
+                let publishedTx = OmniverseProtocol.OmniverseTx(txData: omniverse, signature: signature, uuid: omniverseToken.uuid);
+                OmniverseProtocol.addPendingToken(recvIdentity: omniverse.recver!, token: <- omniverseToken);
+                OmniverseProtocol.addOmniverseTx(pubAddr:opAddressOnFlow, omniverseTx: publishedTx);
+
+                return true;
+            };
+
+            self._check_and_exec(txData: txData, 
+                                    signature: signature,
+                                    _exec_fun: execFun);
+        }
+
+        access(account) fun omniverseSettle(omniToken: @AnyResource{OmniverseProtocol.OmniverseToken}){
+            destroy omniToken;
         }
     }
 
