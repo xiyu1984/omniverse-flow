@@ -6,4 +6,5 @@ pub fun main() {
     log(pubAcct.contracts.get(name: "ExampleToken")!.name);
 
     log(UInt128(1).toBigEndianBytes());
+    log(pubAcct.address.toString());
 }

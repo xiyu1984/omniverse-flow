@@ -9,6 +9,10 @@ pub contract SkyWalkerFoungible: FungibleToken {
     /// stays accurate and up to date
     pub var totalSupply: UFix64
 
+    pub let contractName: String;
+
+    // key: chainid; value: contract name
+    pub let allowedContract: {String: String};
     /// TokensInitialized
     /// The event that is emitted when the contract is created
     pub event TokensInitialized(initialSupply: UFix64)
@@ -194,19 +198,28 @@ pub contract SkyWalkerFoungible: FungibleToken {
                                                     signature: [UInt8]) {
             let omniverse = txData as! OmniverseFoungible;
 
+            // check if the input tx is for the allowed contracts
+            if !SkyWalkerFoungible.checkContractAllowed(chainid: omniverse.chainid, contractName: omniverse.contractName) {
+                panic("Contract Forbidden!");
+            }
+
+            // check if the operator is honest
             let opAddressOnFlow = self.owner!.address;
             OmniverseProtocol.checkValid(opAddressOnFlow: opAddressOnFlow);
 
             let pk = OmniverseProtocol.getPublicKey(address: opAddressOnFlow, signatureAlgorithm: SignatureAlgorithm.ECDSA_secp256k1);
             
+            // check operation
             if omniverse.operation != 2 {
                 panic("Invalid operation. Need `2` for `approve out`. Got: ".concat(omniverse.operation.toString()))
             }
 
+            // check the owner has the permission to operate the tx
             let omniOpIdentity = omniverse.getOperateIdentity();
             if String.encodeHex(omniOpIdentity) != String.encodeHex(pk.publicKey) {
                 panic("Operation identities are mismatched!");
             }
+
             //////////////////////////////////////////////////////////////////////////
             // check input nonce
             let workingNonce = OmniverseProtocol.getWorkingNonce(pubAddr: opAddressOnFlow);
@@ -227,11 +240,16 @@ pub contract SkyWalkerFoungible: FungibleToken {
                 // get the OmniverseNFT out
                 let omniverseToken <- self._approve_out(amount: omniverse.amount);
                 let publishedTx = OmniverseProtocol.OmniverseTx(txData: omniverse, signature: signature, uuid: omniverseToken.uuid);
-                //omniverseToken.setLockedTime();
-                OmniverseProtocol.addExtractToken(recvIdentity: omniverse.recver!, token: <- omniverseToken);
-
-                // update omniverse state
-                OmniverseProtocol.addOmniverseTx(pubAddr:opAddressOnFlow, omniverseTx: publishedTx);
+                
+                if omniverse.chainid == OmniverseProtocol.FlowChainID {
+                    // the tx is promoted first on Flow
+                    OmniverseProtocol.addExtractToken(recvIdentity: omniverse.recver!, token: <- omniverseToken);
+                    // update omniverse state
+                    OmniverseProtocol.addOmniverseTx(pubAddr:opAddressOnFlow, omniverseTx: publishedTx);
+                } else {
+                    // the tx is promoted first on other chains, and this is a sychronous message
+                    OmniverseProtocol.addExtractToken(recvIdentity: OmniverseProtocol.black_hole_pk, token: <- omniverseToken);
+                }
             } else if workingNonce > omniverse.nonce {
                 // This is a history transaction and check conflicts
                 let publishedTx = OmniverseProtocol.OmniverseTx(txData: omniverse, signature: signature, uuid: nil);
@@ -250,6 +268,13 @@ pub contract SkyWalkerFoungible: FungibleToken {
 
     init() {
         self.totalSupply = 0.0;
+        self.contractName = self.account.address.toString().concat(".SkyWalkerFoungible");
+        self.allowedContract = {};
+        self.allowedContract[OmniverseProtocol.FlowChainID] = self.contractName;
+    }
+
+    pub fun checkContractAllowed(chainid: String, contractName: String): Bool {
+        return self.allowedContract[chainid]! == contractName;
     }
 
     /// createEmptyVault allows any user to create a new Vault that has a zero balance
