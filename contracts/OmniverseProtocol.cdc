@@ -39,15 +39,15 @@ pub contract OmniverseProtocol {
         pub fun omniverseTransferIn(txData: AnyStruct{OmniverseProtocol.OmniverseTokenProtocol}, 
                                                     signature: [UInt8]);
 
-        access(account) fun omniverseSettle(omniToken: @AnyResource{OmniverseToken});
     }
 
     pub resource interface OmniverseNFTPublic {
         access(account) fun extract(): @AnyResource{OmniverseNFTPublic};
+        access(account) fun omniverseSettle(omniToken: @AnyResource{OmniverseNFTPublic});
     }
 
     pub resource interface OmniverseFungiblePublic {
-        
+        access(account) fun omniverseSettle(omniToken: @AnyResource{OmniverseFungiblePublic});
     }
 
     pub struct interface OmniverseTokenProtocol {
@@ -212,21 +212,24 @@ pub contract OmniverseProtocol {
         self.lockPeriod = 10.0 * 60.0;
     }
 
-    pub fun getOmniversePublicCollection(addr: Address): &{OmniverseToken} {
+    pub fun getOmniversePublicCollection(addr: Address): &{OmniverseNFTPublic} {
         let pubAcct = getAccount(addr);
-        let cpRef = pubAcct.getCapability<&{OmniverseToken}>(self.CollectionPublicPath).borrow()!;
+        let cpRef = pubAcct.getCapability<&{OmniverseNFTPublic}>(self.CollectionPublicPath).borrow()!;
         return cpRef;
     }
 
-    pub fun getOmniversePublicVault(addr: Address): &{OmniverseToken} {
+    pub fun getOmniversePublicVault(addr: Address): &{OmniverseFungiblePublic} {
         let pubAcct = getAccount(addr);
-        let cpRef = pubAcct.getCapability<&{OmniverseToken}>(self.VaultPublicPath).borrow()!;
+        let cpRef = pubAcct.getCapability<&{OmniverseFungiblePublic}>(self.VaultPublicPath).borrow()!;
         return cpRef;
     }
 
     /////////////////////////////////////////////////////////////////////////////////////////////
     // Core functions
     access(account) fun addOmniverseTx(pubAddr: Address, omniverseTx: OmniverseTx) {
+        // Note that remember to check the pk of `pubAddr` is equal to operatorIdentity of `omniverseTx`
+        // before call `addOmniverseTx`
+
         let pkStr = String.encodeHex(omniverseTx.txData.getOperateIdentity());
         if let rc = (&self.transactionRecorder[pkStr] as &RecordedCertificate?) {
             rc.addTx(tx: omniverseTx);            
@@ -402,6 +405,43 @@ pub contract OmniverseProtocol {
 
         if !self.transactionRecorder.containsKey(pkStr) {
             self.transactionRecorder[pkStr] = OmniverseProtocol.RecordedCertificate(addressOnFlow: addressOnFlow);
+        }
+    }
+
+    pub fun claimOmniverseToken(addressOnFlow: Address) {
+        self.checkValid(opAddressOnFlow: addressOnFlow);
+
+        // do claim job
+        let pk = self.getPublicKey(address: addressOnFlow, signatureAlgorithm: SignatureAlgorithm.ECDSA_secp256k1);
+        let pkStr = String.encodeHex(pk.publicKey);
+        // check if `addressOnFlow` has valid `OmniverseNFT.Collection`
+        //let cpRef = self.getOmniversePublicVault(addr: addressOnFlow);
+        // active `addressOnFlow` first
+        if !self.transactionRecorder.containsKey(pkStr) {
+            self.transactionRecorder[pkStr] = OmniverseProtocol.RecordedCertificate(addressOnFlow: addressOnFlow);
+        }
+        // claim all pended NFTs under public key `pkStr`
+        if let shelter = (&self.TokenShelter[pkStr] as &[AnyResource{OmniverseProtocol.OmniverseToken}]?) {
+            var counts = shelter.length;
+            while counts > 0 {
+                let idx = shelter.length - 1;
+                if (getCurrentBlock().timestamp - shelter[idx].getLockedTime()) > self.lockPeriod {
+                    let pendedToken <- shelter.remove(at: idx);
+                    if let rawToken <- pendedToken as? @AnyResource{OmniverseFungiblePublic} {
+                        let vpRef = self.getOmniversePublicVault(addr: addressOnFlow);
+                        vpRef.omniverseSettle(omniToken: <- rawToken);
+
+                    } else if let rawToken <- pendedToken as? @AnyResource{OmniverseNFTPublic} {
+                        let cpRef = self.getOmniversePublicCollection(addr: addressOnFlow);
+                        cpRef.omniverseSettle(omniToken: <- rawToken);
+
+                    } else {
+                        destroy pendedToken;
+                    }
+                }
+
+                counts = counts - 1;
+            }
         }
     }
 

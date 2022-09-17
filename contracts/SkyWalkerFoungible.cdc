@@ -412,8 +412,19 @@ pub contract SkyWalkerFoungible: FungibleToken {
                                     _exec_fun: execFun);
         }
 
-        access(account) fun omniverseSettle(omniToken: @AnyResource{OmniverseProtocol.OmniverseToken}){
-            destroy omniToken;
+        access(account) fun omniverseSettle(omniToken: @AnyResource{OmniverseProtocol.OmniverseFungiblePublic}){
+            let skyWalker <- omniToken as! @SkyWalkerFoungible.Vault;
+            if (skyWalker.balance > 0.0) && (skyWalker.omniverseBalance > 0.0) {
+                panic("Invalid skywalker fungible token!");
+            }
+
+            if skyWalker.balance > 0.0 {
+                self._local_transfer_in(from: <- skyWalker);
+            } else if skyWalker.omniverseBalance > 0.0 {
+                self._omniverse_transfer_in(from: <- skyWalker);            
+            } else {
+                destroy skyWalker;
+            }
         }
     }
 
