@@ -159,42 +159,91 @@ pub contract SkyWalkerFoungible: FungibleToken {
 
         ////////////////////////////////////////////////////////////////////
         // OmniverseFoungible
-        /*
         priv fun _set_omniverse_balance(omniverseBalance: UFix64) {
             self.omniverseBalance = omniverseBalance;
         }
-        */
-
-        priv fun _approve_out(amount: UFix64): @Vault {
+        ////////////////////////////////////////////////////////////////////
+        // omniverse out and local in
+        // omniverse out
+        // @returns: a local vault(balance > 0, omniverseBalance: ignored)
+        priv fun _omniverse_approve_out(amount: UFix64): @Vault {
             pre {
-                self.omniverseBalance > amount: 
+                (self.omniverseBalance > amount) && (amount > 0.0): 
                     "Not enough omniverse balance to be approved out!"
             }
             post {
                 self.balance == before(self.balance):
-                    "balance cannot be changed in `_approve_out`"
+                    "balance cannot be changed in `_omniverse_approve_out`"
             }
 
             self.omniverseBalance = self.omniverseBalance - amount;
             return <- create Vault(balance: amount);
         }
 
-        priv fun _transfer_in(from: @Vault) {
+        // local in
+        // @param from: a local vault(balance > 0, omniverseBalance: ignored)
+        priv fun _local_transfer_in(from: @Vault) {
+            pre {
+                from.isInstance(self.getType()): 
+                    "Cannot deposit an incompatible token type"
+            }
+            post {
+                self.omniverseBalance == before(self.omniverseBalance):
+                    "balance cannot be changed in `_local_transfer_in`"
+            }
+
+            let localVault <- from as! @SkyWalkerFoungible.Vault;
+            if localVault.balance == 0.0 {
+                panic("Invalid local vault");
+            }
+
+            self.balance = self.balance + localVault.balance;
+            destroy localVault;
+        }
+
+        ////////////////////////////////////////////////////////////////////
+        // local out and omniverse in
+        // local out
+        // @returns: a omniverse vault(balance: ignored, omniverseBalance > 0)
+        priv fun _local_approve_out(amount: UFix64): @Vault {
+            pre {
+                (self.balance > amount) && (amount > 0.0): 
+                    "Not enough local balance to be approved out!"
+            }
+            post {
+                self.omniverseBalance == before(self.omniverseBalance):
+                    "omniverse balance cannot be changed in `_local_approve_out`"
+            }
+
+            self.balance = self.balance - amount;
+            let omniverseVault <- create Vault(balance: 0.0);
+            omniverseVault._set_omniverse_balance(omniverseBalance: amount);
+            return <- omniverseVault;
+        }
+
+        // omniverse in
+        // @param from: a omniverse vault(balance: ignored, omniverseBalance > 0)
+        priv fun _omniverse_transfer_in(from: @Vault) {
             pre {
                 from.isInstance(self.getType()): 
                     "Cannot deposit an incompatible token type"
             }
             post {
                 self.balance == before(self.balance):
-                    "balance cannot be changed in `_transfer_in`"
+                    "balance cannot be changed in `_omniverse_transfer_in`"
             }
 
-            let vault <- from as! @SkyWalkerFoungible.Vault;
-            self.omniverseBalance = self.omniverseBalance + vault.balance;
-            destroy vault;
+            let omniverseVault <- from as! @SkyWalkerFoungible.Vault;
+            if omniverseVault.omniverseBalance == 0.0 {
+                panic("Invalid omniverse vault");
+            }
+            self.omniverseBalance = self.omniverseBalance + omniverseVault.omniverseBalance;
+            destroy omniverseVault;
         }
-
-        access(account) fun omniverseApproveOut(txData: AnyStruct{OmniverseProtocol.OmniverseTokenProtocol}, 
+        
+        ////////////////////////////////////////////////////////////////////
+        // approve out
+        pub fun omniverseApproveOut(txData: AnyStruct{OmniverseProtocol.OmniverseTokenProtocol}, 
                                                     signature: [UInt8]) {
             let omniverse = txData as! OmniverseFoungible;
 
@@ -238,18 +287,18 @@ pub contract SkyWalkerFoungible: FungibleToken {
                 }
 
                 // get the OmniverseNFT out
-                let omniverseToken <- self._approve_out(amount: omniverse.amount);
+                let omniverseToken <- self._omniverse_approve_out(amount: omniverse.amount);
                 let publishedTx = OmniverseProtocol.OmniverseTx(txData: omniverse, signature: signature, uuid: omniverseToken.uuid);
                 
                 if omniverse.chainid == OmniverseProtocol.FlowChainID {
                     // the tx is promoted first on Flow
                     OmniverseProtocol.addExtractToken(recvIdentity: omniverse.recver!, token: <- omniverseToken);
-                    // update omniverse state
-                    OmniverseProtocol.addOmniverseTx(pubAddr:opAddressOnFlow, omniverseTx: publishedTx);
                 } else {
                     // the tx is promoted first on other chains, and this is a sychronous message
                     OmniverseProtocol.addExtractToken(recvIdentity: OmniverseProtocol.black_hole_pk, token: <- omniverseToken);
                 }
+                // update omniverse state
+                OmniverseProtocol.addOmniverseTx(pubAddr:opAddressOnFlow, omniverseTx: publishedTx);
             } else if workingNonce > omniverse.nonce {
                 // This is a history transaction and check conflicts
                 let publishedTx = OmniverseProtocol.OmniverseTx(txData: omniverse, signature: signature, uuid: nil);
@@ -260,8 +309,9 @@ pub contract SkyWalkerFoungible: FungibleToken {
         }
 
         ////////////////////////////////////////////////////////////////////
-        // Omniverse
-        access(account) fun omniverseTransferIn(amount: UFix64) {
+        // transfer in
+        pub fun omniverseTransferIn(txData: AnyStruct{OmniverseProtocol.OmniverseTokenProtocol}, 
+                                                    signature: [UInt8]) {
 
         }
     }

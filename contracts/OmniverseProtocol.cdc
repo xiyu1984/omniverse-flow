@@ -43,7 +43,9 @@ pub contract OmniverseProtocol {
     }
 
     pub resource interface OmniverseFoungible {
-        access(account) fun omniverseApproveOut(txData: AnyStruct{OmniverseTokenProtocol}, 
+        pub fun omniverseApproveOut(txData: AnyStruct{OmniverseTokenProtocol}, 
+                                                    signature: [UInt8]);
+        pub fun omniverseTransferIn(txData: AnyStruct{OmniverseProtocol.OmniverseTokenProtocol}, 
                                                     signature: [UInt8]);
     }
 
