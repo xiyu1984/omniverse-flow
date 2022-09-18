@@ -6,22 +6,23 @@ pub contract OmniverseProtocol {
     priv let transactionRecorder: {String: RecordedCertificate};
 
     // Store pending tokens
-    priv let TokenShelter: @{String: [{OmniverseProtocol.OmniverseToken}]};
+    priv let TokenShelter: @{String: [{OmniverseProtocol.OmniverseTokenOperation}]};
 
     // Store NFTs ready to out, this is the only place to change `OmniverseNFT.NFT` to source `NonFungibleToken.NFT` on Flow
-    priv let StarPort: @{String: [{OmniverseProtocol.OmniverseToken}]};
+    priv let StarPort: @{String: [{OmniverseProtocol.OmniverseTokenOperation}]};
 
     // Store punishment NFTs
-    priv let Prisons: @{String: [{OmniverseProtocol.OmniverseToken}]};
+    priv let Prisons: @{String: [{OmniverseProtocol.OmniverseTokenOperation}]};
 
     pub let lockPeriod: UFix64;
 
-    pub let CollectionStoragePath: StoragePath
-    pub let VaultStoragePath: StoragePath
-    pub let CollectionPublicPath: PublicPath
-    pub let VaultPublicPath: PublicPath
+    pub let CollectionPathPrefix: String
+    pub let VaultPathPrefix: String
 
-    pub resource interface OmniverseToken {
+    pub let SubmitterStoragePath: StoragePath
+    pub let SubmitterPublicPath: PublicPath
+
+    pub resource interface OmniverseTokenOperation {
         access(account) var lockedTime: UFix64;
 
         access(account) fun setLockedTime() {
@@ -33,21 +34,19 @@ pub contract OmniverseProtocol {
 
         pub fun getLockedTime(): UFix64;
 
-        pub fun omniverseTransfer(txData: AnyStruct{OmniverseTokenProtocol}, signature: [UInt8]);
-        pub fun omniverseApproveOut(txData: AnyStruct{OmniverseTokenProtocol}, 
-                                                    signature: [UInt8]);
-        pub fun omniverseTransferIn(txData: AnyStruct{OmniverseProtocol.OmniverseTokenProtocol}, 
-                                                    signature: [UInt8]);
+        pub fun omniverseTransfer(txSubmitter: Address);
+        pub fun omniverseApproveOut(txSubmitter: Address);
+        pub fun omniverseTransferIn(txSubmitter: Address);
 
     }
 
-    pub resource interface OmniverseNFTPublic {
-        access(account) fun extract(): @AnyResource{OmniverseNFTPublic};
-        access(account) fun omniverseSettle(omniToken: @AnyResource{OmniverseNFTPublic});
+    pub resource interface OmniverseNFTOperation {
+        access(account) fun extract(): @AnyResource{OmniverseNFTOperation};
+        access(account) fun omniverseSettle(omniToken: @AnyResource{OmniverseNFTOperation});
     }
 
-    pub resource interface OmniverseFungiblePublic {
-        access(account) fun omniverseSettle(omniToken: @AnyResource{OmniverseFungiblePublic});
+    pub resource interface OmniverseFungibleOperation {
+        access(account) fun omniverseSettle(omniToken: @AnyResource{OmniverseFungibleOperation});
     }
 
     pub struct interface OmniverseTokenProtocol {
@@ -194,6 +193,40 @@ pub contract OmniverseProtocol {
         }
     }
 
+    pub struct Submittion {
+        pub let txData: AnyStruct{OmniverseTokenProtocol};
+        pub let signature: [UInt8];
+
+        init(txData: AnyStruct{OmniverseTokenProtocol}, signature: [UInt8]) {
+            self.txData = txData;
+            self.signature = signature;
+        }
+    }
+
+    pub resource interface SubmitPublic {
+        pub fun getSubmittion(): Submittion;
+    }
+
+    pub resource TxSubmitter: SubmitPublic {
+        priv var submittion: Submittion?;
+
+        init() {
+            self.submittion = nil;
+        }
+
+        pub fun setSubmittion(submittion: Submittion) {
+            self.submittion = submittion;
+        }
+
+        pub fun clearSubmittion() {
+            self.submittion = nil;
+        }
+
+        pub fun getSubmittion(): Submittion {
+            return self.submittion!;
+        }
+    }
+
     init() {
         self.FlowChainID = "flow-testnet";
 
@@ -204,24 +237,32 @@ pub contract OmniverseProtocol {
         self.StarPort <- {};
         self.Prisons <- {};
 
-        self.CollectionStoragePath = /storage/omniverseCollection
-        self.VaultStoragePath = /storage/omniverseVault
-        self.CollectionPublicPath = /public/omniverseCollection
-        self.VaultPublicPath = /public/omniverseVault
+        self.CollectionPathPrefix = "omniverseCollection";
+        self.VaultPathPrefix = "omniverseVault";
+        self.SubmitterStoragePath = /storage/SubmitterPath;
+        self.SubmitterPublicPath = /public/SubmitterPath;
 
         self.lockPeriod = 10.0 * 60.0;
     }
 
-    pub fun getOmniversePublicCollection(addr: Address): &{OmniverseNFTPublic} {
+    pub fun getOmniversePublicCollection(addr: Address, contractName: String): &{OmniverseNFTOperation} {
+        let publicPath = PublicPath(identifier: OmniverseProtocol.CollectionPathPrefix.concat(contractName))!;
         let pubAcct = getAccount(addr);
-        let cpRef = pubAcct.getCapability<&{OmniverseNFTPublic}>(self.CollectionPublicPath).borrow()!;
+        let cpRef = pubAcct.getCapability<&{OmniverseNFTOperation}>(publicPath).borrow()!;
         return cpRef;
     }
 
-    pub fun getOmniversePublicVault(addr: Address): &{OmniverseFungiblePublic} {
+    pub fun getOmniversePublicVault(addr: Address, contractName: String): &{OmniverseFungibleOperation} {
+        let publicPath = PublicPath(identifier: OmniverseProtocol.VaultPathPrefix.concat(contractName))!;
         let pubAcct = getAccount(addr);
-        let cpRef = pubAcct.getCapability<&{OmniverseFungiblePublic}>(self.VaultPublicPath).borrow()!;
-        return cpRef;
+        let vpRef = pubAcct.getCapability<&{OmniverseFungibleOperation}>(publicPath).borrow()!;
+        return vpRef;
+    }
+
+    pub fun getSubmitterPublic(addr: Address): &{SubmitPublic} {
+        let pubAcct = getAccount(addr);
+        let submitterRef = pubAcct.getCapability<&{SubmitPublic}>(OmniverseProtocol.SubmitterPublicPath).borrow()!;
+        return submitterRef;
     }
 
     /////////////////////////////////////////////////////////////////////////////////////////////
@@ -240,27 +281,27 @@ pub contract OmniverseProtocol {
         }
     }
 
-    access(account) fun addPendingToken(recvIdentity: [UInt8], token: @{OmniverseToken}) {
+    access(account) fun addPendingToken(recvIdentity: [UInt8], token: @{OmniverseTokenOperation}) {
         token.setLockedTime();
         let recvStr = String.encodeHex(recvIdentity);
-        if let shelter = (&self.TokenShelter[recvStr] as &[{OmniverseToken}]?) {
+        if let shelter = (&self.TokenShelter[recvStr] as &[{OmniverseTokenOperation}]?) {
             shelter.append(<- token);
         } else {
             self.TokenShelter[recvStr] <-! [<-token];
         }
     }
 
-    access(account) fun addExtractToken(recvIdentity: [UInt8], token: @{OmniverseToken}) {
+    access(account) fun addExtractToken(recvIdentity: [UInt8], token: @{OmniverseTokenOperation}) {
         token.setLockedTime();
         let recvStr = String.encodeHex(recvIdentity);
-        if let starPort = (&self.StarPort[recvStr] as &[{OmniverseToken}]?) {
+        if let starPort = (&self.StarPort[recvStr] as &[{OmniverseTokenOperation}]?) {
             starPort.append(<- token);
         } else {
             self.StarPort[recvStr] <-! [<-token];
         }
     }
 
-    priv fun takeout(id: UInt64, container: &[{OmniverseToken}]): @{OmniverseToken}? {
+    priv fun takeout(id: UInt64, container: &[{OmniverseTokenOperation}]): @{OmniverseTokenOperation}? {
         let count = container.length;
         var idx = 0;
         while idx < count {
@@ -280,9 +321,9 @@ pub contract OmniverseProtocol {
 
         if tx.txData.operation == 2 {
             // history operation is `withdraw`, so NFT is in `StarPort`
-            if let container = (&self.StarPort[recverStr] as &[{OmniverseToken}]?) {
+            if let container = (&self.StarPort[recverStr] as &[{OmniverseTokenOperation}]?) {
                 if let token <- self.takeout(id: tx.token_uuid!, container: container) {
-                    if let prisons = (&self.Prisons[opStr] as &[{OmniverseToken}]?) {
+                    if let prisons = (&self.Prisons[opStr] as &[{OmniverseTokenOperation}]?) {
                         prisons.append(<- token);
                     } else {
                         self.Prisons[opStr] <-! [<- token];
@@ -291,9 +332,9 @@ pub contract OmniverseProtocol {
             }
         } else if tx.txData.operation == 1 {
             // history operation is `transfer`, so NFT is in `NFTShelter`
-            if let container = (&self.TokenShelter[recverStr] as &[{OmniverseToken}]?) {
+            if let container = (&self.TokenShelter[recverStr] as &[{OmniverseTokenOperation}]?) {
                 if let token <- self.takeout(id: tx.token_uuid!, container: container) {
-                    if let prisons = (&self.Prisons[opStr] as &[{OmniverseToken}]?) {
+                    if let prisons = (&self.Prisons[opStr] as &[{OmniverseTokenOperation}]?) {
                         prisons.append(<- token);
                     } else {
                         self.Prisons[opStr] <-! [<- token];
@@ -408,7 +449,7 @@ pub contract OmniverseProtocol {
         }
     }
 
-    pub fun claimOmniverseToken(addressOnFlow: Address) {
+    pub fun tokenSettlement(addressOnFlow: Address, contractName: String) {
         self.checkValid(opAddressOnFlow: addressOnFlow);
 
         // do claim job
@@ -421,18 +462,18 @@ pub contract OmniverseProtocol {
             self.transactionRecorder[pkStr] = OmniverseProtocol.RecordedCertificate(addressOnFlow: addressOnFlow);
         }
         // claim all pended NFTs under public key `pkStr`
-        if let shelter = (&self.TokenShelter[pkStr] as &[AnyResource{OmniverseProtocol.OmniverseToken}]?) {
+        if let shelter = (&self.TokenShelter[pkStr] as &[AnyResource{OmniverseProtocol.OmniverseTokenOperation}]?) {
             var counts = shelter.length;
             while counts > 0 {
                 let idx = shelter.length - 1;
                 if (getCurrentBlock().timestamp - shelter[idx].getLockedTime()) > self.lockPeriod {
                     let pendedToken <- shelter.remove(at: idx);
-                    if let rawToken <- pendedToken as? @AnyResource{OmniverseFungiblePublic} {
-                        let vpRef = self.getOmniversePublicVault(addr: addressOnFlow);
+                    if let rawToken <- pendedToken as? @AnyResource{OmniverseFungibleOperation} {
+                        let vpRef = self.getOmniversePublicVault(addr: addressOnFlow, contractName: contractName);
                         vpRef.omniverseSettle(omniToken: <- rawToken);
 
-                    } else if let rawToken <- pendedToken as? @AnyResource{OmniverseNFTPublic} {
-                        let cpRef = self.getOmniversePublicCollection(addr: addressOnFlow);
+                    } else if let rawToken <- pendedToken as? @AnyResource{OmniverseNFTOperation} {
+                        let cpRef = self.getOmniversePublicCollection(addr: addressOnFlow, contractName: contractName);
                         cpRef.omniverseSettle(omniToken: <- rawToken);
 
                     } else {
@@ -490,5 +531,8 @@ pub contract OmniverseProtocol {
 
         return 0.0;
     }
+
+    // for test and human check
+
 }
  

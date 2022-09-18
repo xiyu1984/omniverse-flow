@@ -103,7 +103,7 @@ pub contract SkyWalkerFoungible: FungibleToken {
     ///
     /// The resource that contains the functions to send and receive tokens.
     ///
-    pub resource Vault: FungibleToken.Provider, FungibleToken.Receiver, FungibleToken.Balance, OmniverseProtocol.OmniverseToken, OmniverseProtocol.OmniverseFungiblePublic {
+    pub resource Vault: FungibleToken.Provider, FungibleToken.Receiver, FungibleToken.Balance, OmniverseProtocol.OmniverseTokenOperation, OmniverseProtocol.OmniverseFungibleOperation {
 
         // The declaration of a concrete type in a contract interface means that
         // every Fungible Token contract that implements the FungibleToken interface
@@ -261,9 +261,10 @@ pub contract SkyWalkerFoungible: FungibleToken {
 
         ////////////////////////////////////////////////////////////////////
         // public part of omniverse process
-        priv fun _check_and_exec(txData: AnyStruct{OmniverseProtocol.OmniverseTokenProtocol}, 
-                                    signature: [UInt8], 
-                                    _exec_fun: ((OmniverseFoungible): Bool) ) {
+        priv fun _check_and_exec(txSubmitter: Address, 
+                                txData: AnyStruct{OmniverseProtocol.OmniverseTokenProtocol}, 
+                                signature: [UInt8],
+                                _exec_fun: ((OmniverseFoungible): Bool) ) {
             let omniverse = txData as! OmniverseFoungible;
 
             // check if the input tx is for the allowed contracts
@@ -316,8 +317,12 @@ pub contract SkyWalkerFoungible: FungibleToken {
         
         ////////////////////////////////////////////////////////////////////
         // omniverse approve out
-        pub fun omniverseApproveOut(txData: AnyStruct{OmniverseProtocol.OmniverseTokenProtocol}, 
-                                                    signature: [UInt8]) {
+        pub fun omniverseApproveOut(txSubmitter: Address) {
+
+            let submitterRef = OmniverseProtocol.getSubmitterPublic(addr: txSubmitter);
+            let submittion = submitterRef.getSubmittion();
+            let txData = submittion.txData;
+            let signature = submittion.signature;
 
             let opAddressOnFlow = self.owner!.address;
             let vaultRef = &self as! & Vault;
@@ -334,11 +339,14 @@ pub contract SkyWalkerFoungible: FungibleToken {
                 
                 if omniverse.chainid == OmniverseProtocol.FlowChainID {
                     // the tx is promoted first on Flow
-                    OmniverseProtocol.addExtractToken(recvIdentity: omniverse.recver!, token: <- localToken);
+                    OmniverseProtocol.addPendingToken(recvIdentity: omniverse.recver!, token: <- localToken);
                 } else {
                     // the tx is promoted first on other chains, and this is a sychronous message
                     destroy localToken;
-                    //OmniverseProtocol.addExtractToken(recvIdentity: OmniverseProtocol.black_hole_pk, token: <- localToken);
+
+                    //////////////////////////////////////////////////////////
+                    // TODO: reward off-chain nodes as they found confilicts
+                    //////////////////////////////////////////////////////////
                 }
                 // update omniverse state
                 OmniverseProtocol.addOmniverseTx(pubAddr:opAddressOnFlow, omniverseTx: publishedTx);
@@ -346,16 +354,21 @@ pub contract SkyWalkerFoungible: FungibleToken {
                 return true;
             };
 
-            self._check_and_exec(txData: txData, 
-                                    signature: signature,
-                                    _exec_fun: execFun);
+            self._check_and_exec(txSubmitter: txSubmitter,
+                                txData: txData,
+                                signature: signature,
+                                _exec_fun: execFun);
         }
 
         ////////////////////////////////////////////////////////////////////
         // omniverse transfer in
-        pub fun omniverseTransferIn(txData: AnyStruct{OmniverseProtocol.OmniverseTokenProtocol}, 
-                                                    signature: [UInt8]) {
+        pub fun omniverseTransferIn(txSubmitter: Address) {
             
+            let submitterRef = OmniverseProtocol.getSubmitterPublic(addr: txSubmitter);
+            let submittion = submitterRef.getSubmittion();
+            let txData = submittion.txData;
+            let signature = submittion.signature;
+
             let opAddressOnFlow = self.owner!.address;
             let vaultRef = &self as! & Vault;
 
@@ -377,19 +390,30 @@ pub contract SkyWalkerFoungible: FungibleToken {
                     let publishedTx = OmniverseProtocol.OmniverseTx(txData: omniverse, signature: signature, uuid: nil);
                     OmniverseProtocol.addOmniverseTx(pubAddr:opAddressOnFlow, omniverseTx: publishedTx);
 
+                    //////////////////////////////////////////////////////////
+                    // TODO: reward off-chain nodes as they found confilicts
+                    //////////////////////////////////////////////////////////
+
                 }
                 
                 return true;
             };
 
-            self._check_and_exec(txData: txData, 
-                                    signature: signature,
-                                    _exec_fun: execFun);
+            self._check_and_exec(txSubmitter: txSubmitter,
+                                txData: txData,
+                                signature: signature,
+                                _exec_fun: execFun);
         }
 
         ////////////////////////////////////////////////////////////////////
         // omniverse transfer
-        pub fun omniverseTransfer(txData: AnyStruct{OmniverseProtocol.OmniverseTokenProtocol}, signature: [UInt8]){
+        pub fun omniverseTransfer(txSubmitter: Address){
+            
+            let submitterRef = OmniverseProtocol.getSubmitterPublic(addr: txSubmitter);
+            let submittion = submitterRef.getSubmittion();
+            let txData = submittion.txData;
+            let signature = submittion.signature;
+            
             let opAddressOnFlow = self.owner!.address;
             let vaultRef = &self as! & Vault;
 
@@ -404,15 +428,22 @@ pub contract SkyWalkerFoungible: FungibleToken {
                 OmniverseProtocol.addPendingToken(recvIdentity: omniverse.recver!, token: <- omniverseToken);
                 OmniverseProtocol.addOmniverseTx(pubAddr:opAddressOnFlow, omniverseTx: publishedTx);
 
+                if omniverse.chainid != OmniverseProtocol.FlowChainID {
+                    //////////////////////////////////////////////////////////
+                    // TODO: reward off-chain nodes as they found confilicts
+                    //////////////////////////////////////////////////////////
+                }
+
                 return true;
             };
 
-            self._check_and_exec(txData: txData, 
-                                    signature: signature,
-                                    _exec_fun: execFun);
+            self._check_and_exec(txSubmitter: txSubmitter,
+                                txData: txData,
+                                signature: signature,
+                                _exec_fun: execFun);
         }
 
-        access(account) fun omniverseSettle(omniToken: @AnyResource{OmniverseProtocol.OmniverseFungiblePublic}){
+        access(account) fun omniverseSettle(omniToken: @AnyResource{OmniverseProtocol.OmniverseFungibleOperation}){
             let skyWalker <- omniToken as! @SkyWalkerFoungible.Vault;
             if (skyWalker.balance > 0.0) && (skyWalker.omniverseBalance > 0.0) {
                 panic("Invalid skywalker fungible token!");
