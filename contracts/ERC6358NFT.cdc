@@ -1,9 +1,9 @@
 import NonFungibleToken from "./NonFungibleToken.cdc"
 import MetadataViews from "./MetadataViews.cdc"
 
-pub contract ERC6358NFT: NonFungibleToken {
+pub contract ERC6358NFT {
     /// The total number of tokens of this type in existence
-    pub var totalSupply: UInt64
+    // pub var totalSupply: UInt64
 
     /// Event that emitted when the NFT contract is initialized
     pub event ContractInitialized()
