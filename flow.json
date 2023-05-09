@@ -22,7 +22,8 @@
     "SkyWalkerFoungible": "./contracts/SkyWalkerFoungible.cdc", 
     "OmniverseProtocol": "./contracts/OmniverseProtocol.cdc",
     "ERC6358Protocol": "./contracts/ERC6358Protocol.cdc",
-    "ERC6358NFT": "./contracts/ERC6358NFT.cdc"
+    "IERC6358Token": "./contracts/IERC6358Token.cdc",
+    "ERC6358NFTExample": "./contracts/ERC6358NFTExample.cdc"
   },
   "networks": {
     "emulator": "127.0.0.1:3569",
@@ -99,7 +100,8 @@
         "ExampleNFT",
         "ExampleToken",
         "ERC6358Protocol",
-        "ERC6358NFT"
+        "IERC6358Token",
+        "ERC6358NFTExample"
       ]
     },
     "testnet": {
@@ -111,7 +113,8 @@
         "ExampleNFT",
         "ExampleToken",
         "ERC6358Protocol",
-        "ERC6358NFT"
+        "IERC6358Token",
+        "ERC6358NFTExample"
       ]
     }
   }

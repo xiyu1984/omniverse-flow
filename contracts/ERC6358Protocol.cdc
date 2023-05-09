@@ -16,14 +16,14 @@ pub contract ERC6358Protocol {
 
     pub resource interface IERC6358Operation {
         pub fun sendOmniverseTransaction(txData: AnyStruct{OmniverseTokenProtocol});
-        pub fun getTransactionCount(pk: [UInt8]): UInt128;
-        pub fun getTransactionData(user: [UInt8], nonce: UInt128): SubmittedTxData;
+        // pub fun getTransactionCount(pk: [UInt8]): UInt128;
+        // pub fun getTransactionData(user: [UInt8], nonce: UInt128): OmniverseTxData;
 
         // Not in the `EIP-6358` standard, but necessary in Flow
-        pub fun omniverseSettle(omniToken: @AnyResource{IERC6358Operation});
+        access(account) fun omniverseExec(omniToken: @AnyResource{ERC6358Token});
     }
 
-    pub resource interface ERC6358TokenExec {
+    pub resource interface ERC6358Token {
         access(account) var lockedTime: UFix64;
 
         access(account) fun setLockedTime() {
@@ -34,8 +34,6 @@ pub contract ERC6358Protocol {
         }
 
         pub fun getLockedTime(): UFix64;
-
-        pub fun execution();
     }
 
     pub struct interface ERC6358Payload {
@@ -66,28 +64,118 @@ pub contract ERC6358Protocol {
         // pub fun getOperateIdentity(): [UInt8];
     }
 
-    pub struct SubmittedTxData {
+    pub struct OmniverseTxData {
         pub let txData: AnyStruct{OmniverseTokenProtocol};
-        pub let _time: UInt64;
+        pub let _time: UFix64;
 
         init(txData: AnyStruct{OmniverseTokenProtocol}) {
             self.txData = txData;
-            self._time = getCurrentBlock().height;
+            self._time = getCurrentBlock().timestamp;
         }
     }
 
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+    // Omniverse operation related definations
+    pub struct RecordedCertificate {
+        priv var nonce: UInt128;
+        pub let addressOnFlow: Address;
+        // The index of array `PublishedTokenTx` is related nonce,
+        // that is, the nonce of a `PublishedTokenTx` instance is its index in the array
+        pub let publishedTx: [OmniverseTxData];
+        
+        pub let evil: {UInt128: [OmniverseTxData]};
+
+        init(addressOnFlow: Address) {
+            self.nonce = 0;
+            self.addressOnFlow = addressOnFlow;
+            self.publishedTx = [];
+            self.evil = {};
+        }
+
+        pub fun validCheck() {
+            if self.isMalicious() {
+                panic("Account: ".concat(self.addressOnFlow.toString()).concat(" has been locked as malicious things!"));
+            }
+        }
+
+        pub fun getWorkingNonce(): UInt128 {
+            return self.nonce + 1;
+        }
+
+        access(account) fun makeNextNonce() {
+            self.validCheck();
+
+            if self.nonce == UInt128.max {
+                self.nonce = 0;
+            } else {
+                self.nonce = self.nonce + 1;
+            }
+        }
+
+        access(account) fun addTx(tx: OmniverseTxData) {
+            self.validCheck();
+
+            if tx.txData.nonce != UInt128(self.publishedTx.length) {
+                panic("Nonce error in transaction list! Address: ".concat(self.addressOnFlow.toString()));
+            }
+
+            self.publishedTx.append(tx);
+        }
+
+        pub fun getAllTx(): [OmniverseTxData] {
+            return self.publishedTx;
+        }
+
+        pub fun getLatestTx(): OmniverseTxData? {
+            let len = self.publishedTx.length;
+            if len > 0 {
+                return self.publishedTx[len - 1];
+            } else if len == 0 {
+                return nil;
+            } else {
+                panic("Invalid length");
+            }
+            return nil;
+        }
+
+        pub fun getLatestTime(): UFix64 {
+            if let latestTx = self.getLatestTx() {
+                return latestTx._time;
+            } else {
+                return 0.0;
+            }
+        }
+
+        access(account) fun setMalicious(historyTx: OmniverseTxData, currentTx: OmniverseTxData) {
+            if let evilRecord = (&self.evil[historyTx.txData.nonce] as &[OmniverseTxData]?) {
+                evilRecord.append(currentTx);
+            } else {
+                self.evil[historyTx.txData.nonce] = [historyTx, currentTx];
+            }
+        }
+
+        pub fun getEvils(): {UInt128: [OmniverseTxData]}{
+            return self.evil;
+        }
+
+        pub fun isMalicious(): Bool {
+            return self.evil.length > 0;
+        }
+    }
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+
     pub resource interface SubmitPublic {
-        pub fun getSubmittedTx(): SubmittedTxData;
+        pub fun getSubmittedTx(): AnyStruct{OmniverseTokenProtocol};
     }
 
     pub resource TxSubmitter: SubmitPublic {
-        priv var sTxData: SubmittedTxData?;
+        priv var sTxData: AnyStruct{OmniverseTokenProtocol}?;
 
         init() {
             self.sTxData = nil;
         }
 
-        pub fun setSubmittedTx(sTxData: SubmittedTxData) {
+        pub fun setSubmittedTx(sTxData: AnyStruct{OmniverseTokenProtocol}) {
             self.sTxData = sTxData;
         }
 
@@ -95,7 +183,7 @@ pub contract ERC6358Protocol {
             self.sTxData = nil;
         }
 
-        pub fun getSubmittedTx(): SubmittedTxData {
+        pub fun getSubmittedTx(): AnyStruct{OmniverseTokenProtocol} {
             return self.sTxData!;
         }
     }
