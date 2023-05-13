@@ -37,11 +37,13 @@ pub contract interface IERC6358Token {
     }
 
     pub struct interface IERC6358Payload {
-        pub let exData: [UInt8];
         // 0: Omniverse Transfer
         // 1: Omniverse mint
         // 2: Omniverse burn
         pub let operation: UInt8;
+        pub let exData: [UInt8];
+
+        pub fun toBytes(): [UInt8];
     }
 
     pub struct interface IERC6358TxProtocol {
