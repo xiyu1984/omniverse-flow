@@ -21,8 +21,8 @@ import MetadataViews from "./MetadataViews.cdc"
 
 pub contract OmniverseNFT: NonFungibleToken {
 
-    pub let domainName: String
-    pub var totalSupply: UInt64
+    pub let domainName: String;
+    pub var totalSupply: UInt64;
 
     // especial for Omniverse
     // priv var nonce: {String: UInt128};

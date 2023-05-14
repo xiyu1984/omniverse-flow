@@ -18,16 +18,20 @@ pub contract ERC6358Protocol {
         pub let txData: AnyStruct{IERC6358Token.IERC6358TxProtocol};
         pub let _time: UFix64;
 
+        pub let hash: String;
+
         init(txData: AnyStruct{IERC6358Token.IERC6358TxProtocol}) {
             self.txData = txData;
             self._time = getCurrentBlock().timestamp;
+
+            self.hash = String.encodeHex(HashAlgorithm.KECCAK_256.hash(self.txData.toBytes()));
         }
     }
 
     /////////////////////////////////////////////////////////////////////////////////////////////////
     // Omniverse operation related definations
     pub struct RecordedCertificate {
-        priv var nonce: UInt128;
+        priv var nextNonce: UInt128;
         pub let addressOnFlow: Address;
         // The index of array `PublishedTokenTx` is related nonce,
         // that is, the nonce of a `PublishedTokenTx` instance is its index in the array
@@ -36,7 +40,7 @@ pub contract ERC6358Protocol {
         pub let evil: {UInt128: [OmniverseTxData]};
 
         init(addressOnFlow: Address) {
-            self.nonce = 0;
+            self.nextNonce = 0;
             self.addressOnFlow = addressOnFlow;
             self.publishedTx = [];
             self.evil = {};
@@ -49,18 +53,18 @@ pub contract ERC6358Protocol {
         }
 
         pub fun getWorkingNonce(): UInt128 {
-            return self.nonce + 1;
+            return self.nextNonce;
         }
 
-        access(account) fun makeNextNonce() {
-            self.validCheck();
+        // access(account) fun makeNextNonce() {
+        //     self.validCheck();
 
-            if self.nonce == UInt128.max {
-                self.nonce = 0;
-            } else {
-                self.nonce = self.nonce + 1;
-            }
-        }
+        //     if self.nonce == UInt128.max {
+        //         self.nonce = 0;
+        //     } else {
+        //         self.nonce = self.nonce + 1;
+        //     }
+        // }
 
         access(account) fun addTx(tx: OmniverseTxData) {
             self.validCheck();
@@ -70,6 +74,7 @@ pub contract ERC6358Protocol {
             }
 
             self.publishedTx.append(tx);
+            self.nextNonce = UInt128(self.publishedTx.length);
         }
 
         pub fun getAllTx(): [OmniverseTxData] {
