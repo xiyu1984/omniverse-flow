@@ -15,7 +15,7 @@ pub contract interface IERC6358Token {
     /////////////////////////////////////////////////////////////////////////////////////////////////
     // Interfaces of ERC6358 defination for Flow
     pub resource interface IERC6358Operation {
-        pub fun sendOmniverseTransaction(txData: AnyStruct{IERC6358TxProtocol});
+        pub fun sendOmniverseTransaction(otx: AnyStruct{IERC6358TxProtocol});
         // pub fun getTransactionCount(pk: [UInt8]): UInt128;
         // pub fun getTransactionData(user: [UInt8], nonce: UInt128): OmniverseTxData;
 

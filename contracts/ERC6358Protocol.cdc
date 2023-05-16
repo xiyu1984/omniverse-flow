@@ -56,6 +56,18 @@ pub contract ERC6358Protocol {
             return self.nextNonce;
         }
 
+        pub fun getTransactionCount(): UInt128 {
+            return UInt128(self.publishedTx.length);
+        }
+
+        pub fun getTransactionData(nonce: UInt128): AnyStruct{IERC6358Token.IERC6358TxData} {
+            if (nonce < UInt128(self.publishedTx.length)) {
+                return self.publishedTx[nonce];
+            }
+
+            panic("Omniverse Transaction with nonce ".concat(nonce.toString()).concat(" does not exist!"));
+        }
+
         // access(account) fun makeNextNonce() {
         //     self.validCheck();
 

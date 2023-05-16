@@ -592,15 +592,13 @@ pub contract OmniverseNFT: NonFungibleToken {
         }
         // claim all pended NFTs under public key `pkStr`
         if let shelter = (&self.NFTShelter[pkStr] as &[OmniverseNFT.NFT]?) {
-            var counts = shelter.length;
-            while counts > 0 {
-                let idx = shelter.length - 1;
+            var idx = shelter.length;
+            while idx > 0 {
+                let idx = idx - 1;
                 if (getCurrentBlock().timestamp - shelter[idx].getLockedTime()) > self.lockPeriod {
                     let pendedNFT <- shelter.remove(at: idx);
                     cpRef.omniverseReceive(omniNFT: <- pendedNFT);
                 }
-
-                counts = counts - 1;
             }
         }
     }

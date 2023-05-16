@@ -274,13 +274,69 @@ pub contract ERC6358NFTExample: NonFungibleToken, IERC6358Token{
         ////////////////////////////////////////////
         // Operations of ERC6358 defination for Flow
         // Operations include transferring and burning
-        pub fun sendOmniverseTransaction(txData: AnyStruct{IERC6358Token.IERC6358TxProtocol}) {
-            panic("Has not been implemented yet!");
+        pub fun sendOmniverseTransaction(otx: AnyStruct{IERC6358Token.IERC6358TxProtocol}) {
+            let fromAddress = ERC6358Protocol.getFlowAddress(pubKey: otx.from);
+
+            // check `from` address
+            if (self.owner!.address != fromAddress) {
+                panic("Unauthorized Sender!");
+            }
+
+            // check id
+            var tokenId: UInt256? = nil;
+            if let dataPayload: OmniverseNFTPayload = otx.payload as? OmniverseNFTPayload {
+                if (!self.ownedNFTs.containsKey(UInt64(dataPayload.tokenId))) {
+                    panic("Token ID does not exist!");
+                } else {
+                    tokenId = dataPayload.tokenId;
+                }
+            } else {
+                panic("Invalid payload data structure!");
+            }
+
+            // verify message signature
+            if (!ERC6358NFTExample._omniverseTxPublish(otx: otx)) {
+                // panic("Invalid omniverse `mint` transaction!");
+                log("Invalid omniverse `mint` transaction!");
+                return;
+            }
+
+            // do operations
+            if (otx.payload.operation == 0) {
+                self._delayedTransfer(otx: otx, id: tokenId!);
+            } else if (otx.payload.operation == 2) {
+                self._delayedBurn(otx: otx, id: tokenId!);
+            } else {
+                panic("Invalid Operation!");
+            }
         }
 
         // Not in the `EIP-6358` standard, but necessary in Flow
         access(account) fun omniverseExec(omniToken: @AnyResource{IERC6358Token.IERC6358TokenExec}) {
-            panic("Has not been implemented yet!");
+            let nft <- omniToken as! @NonFungibleToken.NFT;
+            // let nft <- temp as! @NonFungibleToken.NFT;
+
+            self.ownedNFTs[nft.id] <-! nft;
+        }
+
+        ////////////////////////////////////////////
+        // inner functions
+        priv fun _delayedTransfer(otx: AnyStruct{IERC6358Token.IERC6358TxProtocol}, id: UInt256) {
+            let nft <- self.ownedNFTs.remove(key: UInt64(id)) ?? panic("missing NFT");
+            let omniverseToken <- (nft as! @NFT);
+
+            ERC6358NFTExample._addPendingToken(recvIdentity: otx.payload.exData, token: <- omniverseToken);
+
+            emit OmniverseTxEvent(pk: otx.from, nonce: otx.nonce, result: true, description: "Omniverse Transfer being Successfully Submitted!");
+        }
+
+        priv fun _delayedBurn(otx: AnyStruct{IERC6358Token.IERC6358TxProtocol}, id: UInt256) {
+            let nft <- self.ownedNFTs.remove(key: UInt64(id)) ?? panic("missing NFT");
+            let omniverseToken <- (nft as! @NFT);
+
+            ERC6358NFTExample._addPendingToken(recvIdentity: [0], token: <- omniverseToken);
+
+            emit OmniverseTxEvent(pk: otx.from, nonce: otx.nonce, result: true, description: "Omniverse Burn being Successfully Submitted!");
         }
     }
 
@@ -306,7 +362,8 @@ pub contract ERC6358NFTExample: NonFungibleToken, IERC6358Token{
         return <- create Collection()
     }
 
-    // Omniverse Operations
+    ////////////////////////////////////////////
+    // Public Omniverse Operations
     pub fun omniverseMint(otx: AnyStruct{IERC6358Token.IERC6358TxProtocol}) {
         let fromAddress = ERC6358Protocol.getFlowAddress(pubKey: otx.from);
         
@@ -345,19 +402,26 @@ pub contract ERC6358NFTExample: NonFungibleToken, IERC6358Token{
         self._nextMintID = self._nextMintID + 1;
 
         emit OmniverseTxEvent(pk: otx.from, nonce: otx.nonce, result: true, description: "Omniverse Mint being Successfully Submitted!");
-        // panic("Has not been completed yet!");
     }
 
     pub fun getTransactionCount(pk: [UInt8]): UInt128 {
-        panic("Has not been implemented yet!");
+        let flowAddress = ERC6358Protocol.getFlowAddress(pubKey: pk);
+        if let rc = self.transactionRecorder[flowAddress] {
+            return rc.getTransactionCount();
+        } else {
+            return UInt128(0);
+        }
     }
 
     pub fun getTransactionData(user: [UInt8], nonce: UInt128): AnyStruct{IERC6358Token.IERC6358TxData} {
-        panic("Has not been implemented yet!");
+        let flowAddress = ERC6358Protocol.getFlowAddress(pubKey: user);
+        if let rc = self.transactionRecorder[flowAddress] {
+            return rc.getTransactionData(nonce: nonce);
+        }
+
+        panic("Omniverse Transaction with nonce ".concat(nonce.toString()).concat(" does not exist!"));
     }
 
-    ////////////////////////////////////////////
-    // pub interfaces
     pub fun getNextMintID(): UInt256{
         return self._nextMintID;
     }
@@ -372,9 +436,40 @@ pub contract ERC6358NFTExample: NonFungibleToken, IERC6358Token{
         }
     }
 
+    pub fun claimOmniverseNFTs(recvPk: [UInt8]) {
+        let flowAddress = ERC6358Protocol.getFlowAddress(pubKey: recvPk);
+
+        self.checkValid(opAddressOnFlow: flowAddress);
+
+        let recvCollection = ERC6358Protocol.getIERC6358Operation(addr: flowAddress, contractName: self.contractName);
+
+        if let shelter = &self.TokenShelter[String.encodeHex(recvPk)] as &[{IERC6358Token.IERC6358TokenExec}]? {
+            var idx = shelter.length;
+            while idx > 0 {
+                let idx = idx - 1;
+                if (getCurrentBlock().timestamp - shelter[idx].getLockedTime()) > self.lockPeriod {
+                    let pendedNFT <- shelter.remove(at: idx);
+                    recvCollection.omniverseExec(omniToken: <- pendedNFT);
+                }
+            }
+        }
+
+        panic("There are not any NFTs to be claimed!");
+    }
+
+    pub fun checkValid(opAddressOnFlow: Address): Bool {
+        if let rc = (&self.transactionRecorder[opAddressOnFlow] as &ERC6358Protocol.RecordedCertificate?) {
+            if rc.isMalicious() {
+                panic("The address did malicious things and has been locked now!");
+            }
+        }
+
+        return true;
+    }
+
     ////////////////////////////////////////////
     // self functions
-    priv fun _omniverseTxPublish(otx: AnyStruct{IERC6358Token.IERC6358TxProtocol}): Bool {
+    access(contract) fun _omniverseTxPublish(otx: AnyStruct{IERC6358Token.IERC6358TxProtocol}): Bool {
         // check signature
         if (!ERC6358Protocol.rawSignatureVerify(pubKey: otx.from, rawData: otx.toBytes(), signature: otx.signature, hashAlgorithm: HashAlgorithm.KECCAK_256)) {
             panic("Invalid signature for the omniverse Tx");
@@ -428,7 +523,7 @@ pub contract ERC6358NFTExample: NonFungibleToken, IERC6358Token{
         }
     }
 
-    priv fun _addPendingToken(recvIdentity: [UInt8], token: @{IERC6358Token.IERC6358TokenExec}) {
+    access(contract) fun _addPendingToken(recvIdentity: [UInt8], token: @{IERC6358Token.IERC6358TokenExec}) {
         token.setLockedTime();
         let recvStr = String.encodeHex(recvIdentity);
         if let shelter = (&self.TokenShelter[recvStr] as &[{IERC6358Token.IERC6358TokenExec}]?) {
