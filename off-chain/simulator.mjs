@@ -1,4 +1,4 @@
-import {FlowService, settlement, sendTransaction, execScripts} from './flowoffchain.mjs'
+import {FlowService, settlement, sendTransaction, execScripts} from './scaffold/flowoffchain.mjs'
 import fcl from '@onflow/fcl';
 import * as types from "@onflow/types";
 import { SHA3 } from 'sha3';
