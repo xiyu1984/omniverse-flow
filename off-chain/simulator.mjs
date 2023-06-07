@@ -1,5 +1,5 @@
 import {FlowService, settlement, sendTransaction, execScripts} from './scaffold-flow/flowoffchain.mjs'
-import fcl from '@onflow/fcl';
+import fcl, { send } from '@onflow/fcl';
 import * as types from "@onflow/types";
 import { SHA3 } from 'sha3';
 
@@ -36,6 +36,16 @@ async function checkMembers() {
     console.log(rstData);
 }
 
+async function setLockPeriod(period) {
+    let fcl_arg = fcl.arg(period, types.UFix64);
+
+    await settlement(await sendTransaction({flowService: fs_owner, tx_path: "../transactions/setLockPeriod.cdc", args: [fcl_arg]}));
+}
+
+async function checkLockPeriod() {
+    console.log(await execScripts({flowService: fs_owner, script_path: "../scripts/getLockPeriod.cdc", args: []}));
+}
+
 function list(val) {
     if (val == undefined) {
         return [];
@@ -51,8 +61,10 @@ function list_line(val) {
 async function commanders() {
     program
         .version('Test Tools for omniverse Flow. v0.0.1')
-        .option('--set-members <members>', 'Get different kinds of accounts from public key', list_line)
+        .option('--set-members <members>', 'Set the member chains of the Omniverse NFT', list_line)
         .option('--check-members', 'Check the allowed members')
+        .option('--set-lock-period <period>', 'Set the cooling time', list_line)
+        .option('--check-lock-period', 'Check the cooling time')
         .parse(process.argv);
         
     if (program.opts().setMembers) {
@@ -64,6 +76,15 @@ async function commanders() {
         await setMembers(...program.opts().setMembers);
     } else if (program.opts().checkMembers) {
         await checkMembers();
+    } else if (program.opts().setLockPeriod) {
+        if (program.opts().setLockPeriod.length != 1) {
+            console.log('1 arguments are needed, but ' + program.opts().setLockPeriod.length + ' provided');
+            return;
+        }
+
+        await setLockPeriod(...program.opts().setLockPeriod);
+    } else if (program.opts().checkLockPeriod) {
+        await checkLockPeriod();
     }
 }
 
