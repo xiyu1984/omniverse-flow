@@ -91,7 +91,16 @@ async function sendOmniverseTransaction(from, to, tokenId) {
 async function mint() {
     const ownerOC = new oc.OmnichainCrypto(keccak256, 'secp256k1', fs_owner.signerPrivateKeyHex);
 
-    const oNFTPayload = new OmniverseNFTPayload(opType.o_mint, ownerOC.getPublic(), "1", await fcl.config.get('Profile'));
+    const nftMeta = await execScripts({
+        flowService: fs_owner, 
+        script_path: "../scripts/getNFTTxMeta.cdc", 
+        args: [
+            fcl.arg(Array.from(Buffer.from(ownerOC.getPublic().substring(2), 'hex')).map((item) => {return String(item)}), types.Array(types.UInt8))
+        ]
+    });
+    console.log(nftMeta);
+
+    const oNFTPayload = new OmniverseNFTPayload(opType.o_mint, ownerOC.getPublic().substring(2), nftMeta.nextNFTId, await fcl.config.get('Profile'));
 
     console.log(oNFTPayload.get_fcl_arg());
 }

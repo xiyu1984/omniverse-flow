@@ -413,38 +413,6 @@ pub contract ERC6358NFTExample: NonFungibleToken, IERC6358Token{
         emit OmniverseTxEvent(pk: otx.from, nonce: otx.nonce, result: true, description: "Omniverse Mint being Successfully Submitted!");
     }
 
-    pub fun getTransactionCount(pk: [UInt8]): UInt128 {
-        let flowAddress = ERC6358Protocol.getFlowAddress(pubKey: pk);
-        if let rc = self.transactionRecorder[flowAddress] {
-            return rc.getTransactionCount();
-        } else {
-            return UInt128(0);
-        }
-    }
-
-    pub fun getTransactionData(user: [UInt8], nonce: UInt128): AnyStruct{IERC6358Token.IERC6358TxData} {
-        let flowAddress = ERC6358Protocol.getFlowAddress(pubKey: user);
-        if let rc = self.transactionRecorder[flowAddress] {
-            return rc.getTransactionData(nonce: nonce);
-        }
-
-        panic("Omniverse Transaction with nonce ".concat(nonce.toString()).concat(" does not exist!"));
-    }
-
-    pub fun getNextMintID(): UInt256{
-        return self._nextMintID;
-    }
-
-    pub fun getWorkingNonce(pk: [UInt8]): UInt128 {
-        let flowAddress = ERC6358Protocol.getFlowAddress(pubKey: pk);
-
-        if let rc = self.transactionRecorder[flowAddress] {
-            return rc.getWorkingNonce();
-        } else {
-            return UInt128(0);
-        }
-    }
-
     pub fun claimOmniverseNFTs(recvPk: [UInt8]) {
         let flowAddress = ERC6358Protocol.getFlowAddress(pubKey: recvPk);
 
@@ -486,6 +454,38 @@ pub contract ERC6358NFTExample: NonFungibleToken, IERC6358Token{
     pub fun getLockPeriod(): UFix64 {
         let modifier = self.account.borrow<&Modifier>(from: self.ModifierPath)!;
         return modifier.lockPeriod;
+    }
+
+    pub fun getTransactionCount(pk: [UInt8]): UInt128 {
+        let flowAddress = ERC6358Protocol.getFlowAddress(pubKey: pk);
+        if let rc = self.transactionRecorder[flowAddress] {
+            return rc.getTransactionCount();
+        } else {
+            return UInt128(0);
+        }
+    }
+
+    pub fun getTransactionData(user: [UInt8], nonce: UInt128): AnyStruct{IERC6358Token.IERC6358TxData} {
+        let flowAddress = ERC6358Protocol.getFlowAddress(pubKey: user);
+        if let rc = self.transactionRecorder[flowAddress] {
+            return rc.getTransactionData(nonce: nonce);
+        }
+
+        panic("Omniverse Transaction with nonce ".concat(nonce.toString()).concat(" does not exist!"));
+    }
+
+    pub fun getNextMintID(): UInt256{
+        return self._nextMintID;
+    }
+
+    pub fun getWorkingNonce(pk: [UInt8]): UInt128 {
+        let flowAddress = ERC6358Protocol.getFlowAddress(pubKey: pk);
+
+        if let rc = self.transactionRecorder[flowAddress] {
+            return rc.getWorkingNonce();
+        } else {
+            return UInt128(0);
+        }
     }
 
     ////////////////////////////////////////////
