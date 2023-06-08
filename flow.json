@@ -33,13 +33,47 @@
   "accounts": {
     "emulator-account": {
       "address": "0xf8d6e0586b0a20c7",
-      "publicKey": "bb499b3527649d37f86d4a16e83aae2f9bd64de510077cf8c5fcb12eafc96c93a0425ac965ce4eb2cc2dd5a350569f10035b4308aadfc544415ddc812f919025",
-      "key": "69e7e51ead557351ade7a575e947c4d4bd19dd8a6cdf00c51f9c7f6f721b72dc"
+      "publicKey": "5c68116abdf69823aab6b6108958ce75c86560f1f5e347d45a1d61bfca0df0489012568f4072589ee2b0c8eb7944a56cd6ba1ac0f56f3a696b0a54d03375818e",
+      "key": {
+				"type": "hex",
+				"index": 0,
+				"privateKey": "69e7e51ead557351ade7a575e947c4d4bd19dd8a6cdf00c51f9c7f6f721b72dc",
+				"signatureAlgorithm": "ECDSA_secp256k1",
+				"hashAlgorithm": "SHA3_256"
+			}
     },
     "emulator-Alice": {
 			"address": "0x01cf0e2f2f715450",
-			"publicKey": "81262aa27f1630ccf1293300e8e1d9a6ba542dffa796b860d53873867175e9d31bd7b7581d2f200f9c3dfdbc10ae912ff036946981e3d8996a14f186d20e3e2f",
-			"key": "c9193930b34dd498378e36c35118a627d9eb500f6fd69b16d8e59db7cc8f5bb3"
+			"publicKey": "417b9ae42da624e4bc680f0231795d62aa28229f54684e7e637d73157f58266558b8ae5aaa47ea087767606962a10874de1dc737bfb096b4e05328c175beddfc",
+      "key": {
+				"type": "hex",
+				"index": 0,
+				"privateKey": "c9193930b34dd498378e36c35118a627d9eb500f6fd69b16d8e59db7cc8f5bb3",
+				"signatureAlgorithm": "ECDSA_secp256k1",
+				"hashAlgorithm": "SHA3_256"
+			}
+		},
+    "emulator-Bob": {
+			"address": "0x179b6b1cb6755e31",
+			"publicKey": "11fbbd1eb335fedb94c342d9ed4638570b177c67014a439716162bc22f8de8224bbdd5aa599bf0b3de1559df68834dce9f7eb1bfc5a177d0792bbf2f3e46524f",
+      "key": {
+				"type": "hex",
+				"index": 0,
+				"privateKey": "d95472318e773b2046b078ae252c42082752c7b7876ce2770a2d3e00b02bbed5",
+				"signatureAlgorithm": "ECDSA_secp256k1",
+				"hashAlgorithm": "SHA3_256"
+			}
+		},
+    "emulator-Carl": {
+			"address": "0xf3fcd2c1a78f5eee",
+			"publicKey": "20409b2afd00ef0dcbbe8111bc56fbcdee742e26d9981c20ae1a4f10668bde66b4ee64edf92727b37a6c0d2ea8c2c090e0cc9f1b357b67694cfb918afd7b6b55",
+      "key": {
+				"type": "hex",
+				"index": 0,
+				"privateKey": "f559fa403545e328ea024ef27e030a478634ae04212519e8bb5293add4b6dda4",
+				"signatureAlgorithm": "ECDSA_secp256k1",
+				"hashAlgorithm": "SHA3_256"
+			}
 		},
     "testnet-account": {
       "address": "0x4f85d5a5afe243d3",
