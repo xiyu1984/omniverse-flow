@@ -18,7 +18,14 @@ flow transactions send ./transactions/transferFlow.cdc 100.0 0xf3fcd2c1a78f5eee
 # Deploy
 flow project deploy --update
 
+# active accounts
 flow transactions send ./transactions/activeSimuAddress.cdc 0xf8d6e0586b0a20c7
 flow transactions send ./transactions/activeSimuAddress.cdc 0x01cf0e2f2f715450
 flow transactions send ./transactions/activeSimuAddress.cdc 0x179b6b1cb6755e31
 flow transactions send ./transactions/activeSimuAddress.cdc 0xf3fcd2c1a78f5eee
+
+# create collection
+flow transactions send ./transactions/createCollection.cdc --signer emulator-account
+flow transactions send ./transactions/createCollection.cdc --signer emulator-Alice
+flow transactions send ./transactions/createCollection.cdc --signer emulator-Bob
+flow transactions send ./transactions/createCollection.cdc --signer emulator-Carl

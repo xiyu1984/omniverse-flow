@@ -125,7 +125,7 @@ async function commanders() {
         .option('--check-members', 'Check the allowed members')
         .option('--set-lock-period <period>', 'Set the cooling time', list_line)
         .option('--check-lock-period', 'Check the cooling time')
-        .option('--mint', 'mint omniverse NFT')
+        .option('--mint', 'mint an omniverse NFT to the owner account')
         .parse(process.argv);
         
     if (program.opts().setMembers) {
