@@ -2,6 +2,7 @@ import {FlowService, settlement, sendTransaction, execScripts} from './scaffold-
 import fcl, { send } from '@onflow/fcl';
 import * as types from "@onflow/types";
 import { SHA3 } from 'sha3';
+import keccak256 from 'keccak256';
 
 // import fs from 'fs';
 // import path from 'path';
@@ -16,6 +17,18 @@ const sha3_256FromString = (msg) => {
 
 const fs_owner = new FlowService('0xf8d6e0586b0a20c7', 
                                     '69e7e51ead557351ade7a575e947c4d4bd19dd8a6cdf00c51f9c7f6f721b72dc',
+                                    0,
+                                    sha3_256FromString,
+                                    'p256');
+
+const fsAlice = new FlowService('0x01cf0e2f2f715450', 
+                                    'c9193930b34dd498378e36c35118a627d9eb500f6fd69b16d8e59db7cc8f5bb3',
+                                    0,
+                                    sha3_256FromString,
+                                    'p256');
+
+const fsBob = new FlowService('0x179b6b1cb6755e31', 
+                                    'd95472318e773b2046b078ae252c42082752c7b7876ce2770a2d3e00b02bbed5',
                                     0,
                                     sha3_256FromString,
                                     'p256');
