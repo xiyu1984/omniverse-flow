@@ -4,7 +4,7 @@ import * as types from "@onflow/types";
 import { SHA3 } from 'sha3';
 import keccak256 from 'keccak256';
 import oc from './scaffold-flow/omnichainCrypto.js';
-import {opType, OmniverseNFTPayload} from './erc6358types.js';
+import {opType, OmniverseNFTPayload, OmniverseNFTProtocol} from './erc6358types.js';
 
 // import fs from 'fs';
 // import path from 'path';
@@ -100,9 +100,28 @@ async function mint() {
     });
     console.log(nftMeta);
 
-    const oNFTPayload = new OmniverseNFTPayload(opType.o_mint, ownerOC.getPublic().substring(2), nftMeta.nextNFTId, await fcl.config.get('Profile'));
+    const oNFTPayload = new OmniverseNFTPayload(opType.o_mint, Buffer.from(ownerOC.getPublic().substring(2), "hex"), nftMeta.nextNFTId, await fcl.config.get('Profile'));
+    // console.log(oNFTPayload.get_fcl_arg().value.fields);
+    const oNFTTxData = new OmniverseNFTProtocol(nftMeta.nonce, nftMeta.flowChainId, nftMeta.contractName, Buffer.from(ownerOC.getPublic().substring(2), "hex"), oNFTPayload, await fcl.config.get('Profile'));
+    // console.log(oNFTTxData.get_fcl_arg().value.fields);
 
-    console.log(oNFTPayload.get_fcl_arg());
+    const txRawData = await execScripts({
+        flowService: fs_owner, 
+        script_path: "../scripts/getRawTxData.cdc", 
+        args: [
+            oNFTTxData.get_fcl_arg()
+        ]
+    });
+    // console.log(Buffer.from("hello", "utf-8").toString("hex"));
+    // oNFTTxData.signature = new Uint8Array(ownerOC.sign2buffer("hello"));
+    // console.log(ownerOC.sign2hexstring("hello"));
+    // console.log(Buffer.from(oNFTTxData.signature).toString("hex"));
+
+    var toBeSign = txRawData;
+    console.log(toBeSign);
+    oNFTTxData.signature = new Uint8Array(ownerOC.sign2buffer(Buffer.from(toBeSign, "hex")));
+    console.log(ownerOC.sign2hexstring(Buffer.from(toBeSign, "hex")));
+    console.log(Buffer.from(oNFTTxData.signature).toString("hex"));
 }
 
 function list(val) {

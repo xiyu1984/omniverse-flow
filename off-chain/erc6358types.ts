@@ -9,7 +9,7 @@ export enum opType {
 
 export class OmniverseNFTPayload {
     operation: opType;
-    exData: Uint8Array;
+    exData: Uint8Array | Buffer;
     tokenId: string;
     id: string;
 
@@ -75,5 +75,49 @@ export class OmniverseNFTPayload {
 }
 
 export class OmniverseNFTProtocol {
+    nonce: string;          // UInt128
+    chainid: string;        // UInt32
+    initiateSC: string;
+    from: Uint8Array | Buffer;
+    payload: OmniverseNFTPayload;
+    signature: Uint8Array;
 
+    id: string;
+
+    constructor(nonce: string, chainid: string, initSC: string, from: Uint8Array | Buffer, payload: OmniverseNFTPayload, moduleAddress: string) {
+        
+        this.nonce = nonce;
+        this.chainid = chainid;
+        this.initiateSC = initSC;
+        this.from = from;
+        this.payload = payload;
+        this.signature = new Uint8Array();
+        
+        if (moduleAddress.startsWith('0x')) {
+            this.id = 'A.' + moduleAddress.slice(2) + '.ERC6358NFTExample.OmniverseNFTProtocol';
+        } else {
+            this.id = 'A.' + moduleAddress + '.ERC6358NFTExample.OmniverseNFTProtocol';
+        }
+    }
+
+    get_fcl_arg() {
+
+        return fcl.arg({
+            fields: [
+                {name: "nonce", value: this.nonce},
+                {name: "chainid", value: this.chainid},
+                {name: "initiateSC", value: this.initiateSC},
+                {name: "from", value: Array.from(this.from).map((num: number) => {return String(num);})},
+                {name: "payload", value: this.payload.get_value()},
+                {name: "signature", value: Array.from(this.signature).map((num: number) => {return String(num);})}
+            ]
+        }, types.Struct(this.id, [
+            {name: "nonce", value: types.UInt128},
+                {name: "chainid", value: types.UInt32},
+                {name: "initiateSC", value: types.String},
+                {name: "from", value: types.Array(types.UInt8)},
+                {name: "payload", value: this.payload.get_type()},
+                {name: "signature", value: types.Array(types.UInt8)}
+        ]));
+    }
 }
