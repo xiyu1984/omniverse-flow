@@ -16,11 +16,6 @@
     "FungibleToken": "./contracts/utility/FungibleToken.cdc",
 	  "NonFungibleToken": "./contracts/NonFungibleToken.cdc",
 	  "MetadataViews": "./contracts/MetadataViews.cdc",
-    "ExampleNFT": "./contracts/ExampleNFT.cdc",
-    "ExampleToken": "./contracts/ExampleToken.cdc",
-    "OmniverseNFT": "./contracts/OmniverseNFT.cdc",
-    "SkyWalkerFoungible": "./contracts/SkyWalkerFoungible.cdc", 
-    "OmniverseProtocol": "./contracts/OmniverseProtocol.cdc",
     "ERC6358Protocol": "./contracts/ERC6358Protocol.cdc",
     "IERC6358Token": "./contracts/IERC6358Token.cdc",
     "ERC6358NFTExample": "./contracts/ERC6358NFTExample.cdc"
@@ -131,8 +126,6 @@
         "FungibleToken", 
         "NonFungibleToken",
         "MetadataViews",
-        "ExampleNFT",
-        "ExampleToken",
         "ERC6358Protocol",
         "IERC6358Token",
         "ERC6358NFTExample"
@@ -144,8 +137,6 @@
         "FungibleToken", 
         "NonFungibleToken",
         "MetadataViews",
-        "ExampleNFT",
-        "ExampleToken",
         "ERC6358Protocol",
         "IERC6358Token",
         "ERC6358NFTExample"
