@@ -48,6 +48,20 @@ const fs_map = {
     "Carl": fsCarl
 }
 
+async function testSignature(pk, txRawData, signature) {
+    const flc_args = [
+        fcl.arg(pk, types.String),
+        fcl.arg(txRawData, types.String),
+        fcl.arg(signature, types.String)
+    ];
+
+    console.log(await execScripts({
+        flowService: fs_owner,
+        script_path: "../test/testSignature.cdc",
+        args: flc_args
+    }));
+}
+
 async function setMembers(members) {
     // console.log(members);
     // let fcl_arg = fcl.arg([{key: 1, value: "one"}, {key: 2, value: "two"}], types.Dictionary({key: types.UInt32, value: types.String}));
@@ -112,16 +126,16 @@ async function mint() {
             oNFTTxData.get_fcl_arg()
         ]
     });
-    // console.log(Buffer.from("hello", "utf-8").toString("hex"));
-    // oNFTTxData.signature = new Uint8Array(ownerOC.sign2buffer("hello"));
-    // console.log(ownerOC.sign2hexstring("hello"));
-    // console.log(Buffer.from(oNFTTxData.signature).toString("hex"));
 
     var toBeSign = txRawData;
     console.log(toBeSign);
     oNFTTxData.signature = new Uint8Array(ownerOC.sign2buffer(Buffer.from(toBeSign, "hex")));
     console.log(ownerOC.sign2hexstring(Buffer.from(toBeSign, "hex")));
     console.log(Buffer.from(oNFTTxData.signature).toString("hex"));
+
+    // test
+    await testSignature(ownerOC.getPublic().substring(2), txRawData, ownerOC.sign2hexstring(Buffer.from(toBeSign, "hex")));
+    // test end
 }
 
 function list(val) {
