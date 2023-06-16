@@ -69,7 +69,8 @@ async function setMembers(members) {
 
     let response = await sendTransaction({flowService: fs_owner, tx_path: "../transactions/setMembers.cdc", args: [fcl_arg]});
 
-    await settlement(response);
+    const rst = await settlement(response);
+    console.log(rst.data);
 }
 
 async function checkMembers() {
@@ -81,7 +82,8 @@ async function checkMembers() {
 async function setLockPeriod(period) {
     let fcl_arg = fcl.arg(period, types.UFix64);
 
-    await settlement(await sendTransaction({flowService: fs_owner, tx_path: "../transactions/setLockPeriod.cdc", args: [fcl_arg]}));
+    const rst = await settlement(await sendTransaction({flowService: fs_owner, tx_path: "../transactions/setLockPeriod.cdc", args: [fcl_arg]}));
+    console.log(rst.data);
 }
 
 async function checkLockPeriod() {
@@ -146,6 +148,20 @@ async function mint() {
     }
 }
 
+async function checkNFTs(account) {
+    const op_fs = fs_map[account];
+
+    const op_oc = new oc.OmnichainCrypto(keccak256, 'secp256k1', op_fs.signerPrivateKeyHex);
+
+    console.log(await execScripts({
+        flowService: op_fs,
+        script_path: "../scripts/checkNFTs.cdc",
+        args: [
+            fcl.arg(Array.from(Buffer.from(op_oc.getPublic().substring(2), 'hex')).map((item) => {return String(item)}), types.Array(types.UInt8))
+        ]
+    }));
+}
+
 function list(val) {
     if (val == undefined) {
         return [];
@@ -167,6 +183,7 @@ async function commanders() {
         .option('--set-lock-period <period>', 'Set the cooling time', list_line)
         .option('--check-lock-period', 'Check the cooling time')
         .option('--mint', 'mint an omniverse NFT to the owner account')
+        .option('--check-nfts <role>', 'Check the NFTs owned by the `role`', list)
         .parse(process.argv);
         
     if (program.opts().setMembers) {
@@ -190,13 +207,15 @@ async function commanders() {
     } else if (program.opts().checkAccounts) {
         await checkSimuAccounts();
     } else if (program.opts().mint) {
-        // if (program.opts().mint.length != 1) {
-        //     console.log('1 arguments are needed, but ' + program.opts().mint.length + ' provided');
-        //     return;
-        // }
-
         await mint();
-    } 
+    } else if (program.opts().checkNfts) {
+        if (program.opts().checkNfts.length != 1) {
+            console.log('1 arguments are needed, but ' + program.opts().checkNfts.length + ' provided');
+            return;
+        }
+
+        await checkNFTs(...program.opts().checkNfts);
+    }
 }
 
 await commanders();

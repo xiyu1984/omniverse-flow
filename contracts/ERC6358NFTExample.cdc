@@ -343,8 +343,16 @@ pub contract ERC6358NFTExample: NonFungibleToken, IERC6358Token{
         pub(set) var lockPeriod: UFix64;                             // In current version, there needs to be a wait time for omniverse transactions to be executed
 
         init(contractName: String) {
-            self.allowedMembers = {};
+            self.allowedMembers = {ERC6358NFTExample.flowChainID: ERC6358NFTExample.contractName};
             self.lockPeriod = 10.0 * 60.0;
+        }
+
+        pub fun checkAllowed(chainID: UInt32, initiateSC: String): Bool {
+            if let allowdSC = self.allowedMembers[chainID] {
+                return allowdSC == initiateSC;
+            } else {
+                return false;
+            }
         }
     }
 
@@ -369,6 +377,11 @@ pub contract ERC6358NFTExample: NonFungibleToken, IERC6358Token{
     // public function that anyone can call to create a new empty collection
     pub fun createEmptyCollection(): @NonFungibleToken.Collection {
         return <- create Collection()
+    }
+
+    pub fun getCollectionPublic(addr: Address): &{NonFungibleToken.CollectionPublic}? {
+        let cp = getAccount(addr).getCapability<&{NonFungibleToken.CollectionPublic}>(self.CollectionPublicPath);
+        return cp.borrow();
     }
 
     ////////////////////////////////////////////
@@ -491,6 +504,11 @@ pub contract ERC6358NFTExample: NonFungibleToken, IERC6358Token{
     ////////////////////////////////////////////
     // self functions
     priv fun _omniverseTxPublish(otx: AnyStruct{IERC6358Token.IERC6358TxProtocol}): Bool {
+        // check initiate SC
+        let modifier = self.account.borrow<&Modifier>(from: self.ModifierPath)!;
+        if (!modifier.checkAllowed(chainID: otx.chainid, initiateSC: otx.initiateSC)) {
+            panic("Invalid member!");
+        }
         // check signature
         if (!ERC6358Protocol.rawSignatureVerify(pubKey: otx.from, rawData: otx.toBytes(), signature: otx.signature, hashAlgorithm: HashAlgorithm.KECCAK_256)) {
             panic("Invalid signature for the omniverse Tx");
