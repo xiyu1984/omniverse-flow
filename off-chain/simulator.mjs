@@ -127,15 +127,23 @@ async function mint() {
         ]
     });
 
-    var toBeSign = txRawData;
-    console.log(toBeSign);
-    oNFTTxData.signature = new Uint8Array(ownerOC.sign2buffer(Buffer.from(toBeSign, "hex")));
-    console.log(ownerOC.sign2hexstring(Buffer.from(toBeSign, "hex")));
-    console.log(Buffer.from(oNFTTxData.signature).toString("hex"));
+    // console.log(toBeSign);
+    oNFTTxData.signature = new Uint8Array(ownerOC.sign2buffer(Buffer.from(txRawData, "hex")));
+    // console.log(ownerOC.sign2hexstring(Buffer.from(txRawData, "hex")));
+    // console.log(Buffer.from(oNFTTxData.signature).toString("hex"));
 
     // test
-    await testSignature(ownerOC.getPublic().substring(2), txRawData, ownerOC.sign2hexstring(Buffer.from(toBeSign, "hex")));
+    // await testSignature(ownerOC.getPublic().substring(2), txRawData, Buffer.from(oNFTTxData.signature).toString("hex"));
     // test end
+
+    let response = await sendTransaction({flowService: fs_owner, 
+                                            tx_path: "../transactions/mintNFT.cdc", 
+                                            args: [oNFTTxData.get_fcl_arg()]});
+
+    let rst = await settlement(response);
+    if (true == rst.status) {
+        console.log(rst.data.events[0].data);
+    }
 }
 
 function list(val) {

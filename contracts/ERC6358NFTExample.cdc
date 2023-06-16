@@ -27,7 +27,7 @@ pub contract ERC6358NFTExample: NonFungibleToken, IERC6358Token{
 
     ////////////////////////////////////
     // Events for Omniverse Transactions
-    pub event OmniverseTxEvent(pk: [UInt8], nonce: UInt128, result: Bool, description: String);      // Omniverse Transactions Information
+    pub event OmniverseTxEvent(pk: String, nonce: UInt128, result: Bool, description: String);      // Omniverse Transactions Information
 
     /////////////////////////////////////////////////////////////////////////////////////////////////
     // Omniverse definations
@@ -325,7 +325,7 @@ pub contract ERC6358NFTExample: NonFungibleToken, IERC6358Token{
 
             ERC6358NFTExample._addPendingToken(recvIdentity: otx.payload.exData, token: <- omniverseToken);
 
-            emit OmniverseTxEvent(pk: otx.from, nonce: otx.nonce, result: true, description: "Omniverse Transfer being Successfully Submitted!");
+            emit OmniverseTxEvent(pk: String.encodeHex(otx.from), nonce: otx.nonce, result: true, description: "Omniverse Transfer being Successfully Submitted!");
         }
 
         priv fun _delayedBurn(otx: AnyStruct{IERC6358Token.IERC6358TxProtocol}, id: UInt256) {
@@ -334,7 +334,7 @@ pub contract ERC6358NFTExample: NonFungibleToken, IERC6358Token{
 
             ERC6358NFTExample._addPendingToken(recvIdentity: [0], token: <- omniverseToken);
 
-            emit OmniverseTxEvent(pk: otx.from, nonce: otx.nonce, result: true, description: "Omniverse Burn being Successfully Submitted!");
+            emit OmniverseTxEvent(pk: String.encodeHex(otx.from), nonce: otx.nonce, result: true, description: "Omniverse Burn being Successfully Submitted!");
         }
     }
 
@@ -410,7 +410,7 @@ pub contract ERC6358NFTExample: NonFungibleToken, IERC6358Token{
         // After everything is OK
         self._nextMintID = self._nextMintID + 1;
 
-        emit OmniverseTxEvent(pk: otx.from, nonce: otx.nonce, result: true, description: "Omniverse Mint being Successfully Submitted!");
+        emit OmniverseTxEvent(pk: String.encodeHex(otx.from), nonce: otx.nonce, result: true, description: "Omniverse Mint being Successfully Submitted!");
     }
 
     pub fun claimOmniverseNFTs(recvPk: [UInt8]) {
@@ -539,7 +539,7 @@ pub contract ERC6358NFTExample: NonFungibleToken, IERC6358Token{
             // Here we will lock the @token added to `TokenShelter` in the past, so we need to use `historyTx.txData`
             self._lockedUpInPrison(otx: &historyTx.txData as! &AnyStruct{IERC6358Token.IERC6358TxProtocol});
 
-            emit OmniverseTxEvent(pk: otx.from, nonce: otx.nonce, result: false, description: "Double Spend Attack!");
+            emit OmniverseTxEvent(pk: String.encodeHex(otx.from), nonce: otx.nonce, result: false, description: "Double Spend Attack!");
             return false;
         }
     }
