@@ -344,7 +344,7 @@ pub contract ERC6358NFTExample: NonFungibleToken, IERC6358Token{
 
         init(contractName: String) {
             self.allowedMembers = {ERC6358NFTExample.flowChainID: ERC6358NFTExample.contractName};
-            self.lockPeriod = 10.0 * 60.0;
+            self.lockPeriod = 60.0;
         }
 
         pub fun checkAllowed(chainID: UInt32, initiateSC: String): Bool {
@@ -361,7 +361,7 @@ pub contract ERC6358NFTExample: NonFungibleToken, IERC6358Token{
         self._nextMintID = 0;
 
         self.flowChainID = 7;
-        self.contractName = self.account.address.toString().concat(".ERC6358NFTExample");
+        self.contractName = self.account.address.toString().concat("ERC6358NFTExample");
 
         self.transactionRecorder = {}
         self.TokenShelter <- {}
@@ -435,8 +435,9 @@ pub contract ERC6358NFTExample: NonFungibleToken, IERC6358Token{
 
         if let shelter = &self.TokenShelter[String.encodeHex(recvPk)] as &[{IERC6358Token.IERC6358TokenExec}]? {
             var idx = shelter.length;
+            log(idx);
             while idx > 0 {
-                let idx = idx - 1;
+                idx = idx - 1;
                 if (getCurrentBlock().timestamp - shelter[idx].getLockedTime()) > self.getLockPeriod() {
                     let pendedNFT <- shelter.remove(at: idx);
                     recvCollection.omniverseExec(omniToken: <- pendedNFT);
@@ -444,7 +445,7 @@ pub contract ERC6358NFTExample: NonFungibleToken, IERC6358Token{
             }
         }
 
-        panic("There are not any NFTs to be claimed!");
+        // panic("There are not any NFTs to be claimed!");
     }
 
     pub fun checkValid(opAddressOnFlow: Address): Bool {

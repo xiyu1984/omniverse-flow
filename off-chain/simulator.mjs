@@ -148,6 +148,22 @@ async function mint() {
     }
 }
 
+async function claimNFTs(account) {
+    const op_fs = fs_map[account];
+    const op_oc = new oc.OmnichainCrypto(keccak256, 'secp256k1', op_fs.signerPrivateKeyHex);
+
+    const response = await sendTransaction({
+        flowService: op_fs,
+        tx_path: "../transactions/claimNFT.cdc",
+        args: [
+            fcl.arg(Array.from(Buffer.from(op_oc.getPublic().substring(2), 'hex')).map((item) => {return String(item)}), types.Array(types.UInt8))
+        ]
+    });
+
+    const rst = await settlement(response);
+    console.log(rst.data);
+}
+
 async function checkNFTs(account) {
     const op_fs = fs_map[account];
 
@@ -184,6 +200,7 @@ async function commanders() {
         .option('--check-lock-period', 'Check the cooling time')
         .option('--mint', 'mint an omniverse NFT to the owner account')
         .option('--check-nfts <role>', 'Check the NFTs owned by the `role`', list)
+        .option('--claim-NFTs <role>', 'Claim the NFTs held in the shelter owned by the `role`', list)
         .parse(process.argv);
         
     if (program.opts().setMembers) {
@@ -215,6 +232,13 @@ async function commanders() {
         }
 
         await checkNFTs(...program.opts().checkNfts);
+    } else if (program.opts().claimNFTs) {
+        if (program.opts().claimNFTs.length != 1) {
+            console.log('1 arguments are needed, but ' + program.opts().claimNFTs.length + ' provided');
+            return;
+        }
+
+        await claimNFTs(...program.opts().claimNFTs);
     }
 }
 
