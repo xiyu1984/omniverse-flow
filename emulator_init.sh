@@ -29,3 +29,8 @@ flow transactions send ./transactions/createCollection.cdc --signer emulator-acc
 flow transactions send ./transactions/createCollection.cdc --signer emulator-Alice
 flow transactions send ./transactions/createCollection.cdc --signer emulator-Bob
 flow transactions send ./transactions/createCollection.cdc --signer emulator-Carl
+
+# set member and set lock period (for test)
+cd ./off-chain
+node ./simulator.mjs --set-lock-period 30.0
+cd ..
