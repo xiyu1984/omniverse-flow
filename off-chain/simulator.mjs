@@ -100,11 +100,53 @@ async function checkSimuAccounts() {
     }
 }
 
-async function sendOmniverseTransaction(from, to, tokenId) {
-    
+async function sendOmniverseTransaction(from, to, tokenId, op_type) {
+    const opOc = new oc.OmnichainCrypto(keccak256, 'secp256k1', fs_map[from].signerPrivateKeyHex);
+
+    const nftMeta = await execScripts({
+        flowService: fs_map[from], 
+        script_path: "../scripts/getNFTTxMeta.cdc", 
+        args: [
+            fcl.arg(Array.from(Buffer.from(opOc.getPublic().substring(2), 'hex')).map((item) => {return String(item)}), types.Array(types.UInt8))
+        ]
+    });
+    console.log(nftMeta);
+
+    const oNFTPayload = new OmniverseNFTPayload(op_type, to, tokenId, await fcl.config.get('Profile'));
+    // console.log(oNFTPayload.get_fcl_arg().value.fields);
+    const oNFTTxData = new OmniverseNFTProtocol(nftMeta.nonce, nftMeta.flowChainId, nftMeta.contractName, Buffer.from(opOc.getPublic().substring(2), "hex"), oNFTPayload, await fcl.config.get('Profile'));
+    // console.log(oNFTTxData.get_fcl_arg().value.fields);
+
+    const txRawData = await execScripts({
+        flowService: fs_map[from], 
+        script_path: "../scripts/getRawTxData.cdc", 
+        args: [
+            oNFTTxData.get_fcl_arg()
+        ]
+    });
+
+    oNFTTxData.signature = new Uint8Array(opOc.sign2buffer(Buffer.from(txRawData, "hex")));
+
+    let response = await sendTransaction({flowService: fs_map[from], 
+        tx_path: "../transactions/sendNFT.cdc", 
+        args: [oNFTTxData.get_fcl_arg()]});
+
+    let rst = await settlement(response);
+    if (true == rst.status) {
+        console.log(rst.data.events[0].data);
+    }
 }
 
-async function mint() {
+async function nftTransfer(from, to, tokenId) {
+    const toOc = new oc.OmnichainCrypto(keccak256, 'secp256k1', fs_map[to].signerPrivateKeyHex);
+    await sendOmniverseTransaction(from, Buffer.from(toOc.getPublic().substring(2), "hex"), tokenId, opType.o_transfer);
+}
+
+async function nftBurn(from, tokenId) {
+    await sendOmniverseTransaction(from, new Uint8Array(), tokenId, opType.o_burn);
+}
+
+async function nftMint() {
     const ownerOC = new oc.OmnichainCrypto(keccak256, 'secp256k1', fs_owner.signerPrivateKeyHex);
 
     const nftMeta = await execScripts({
@@ -198,9 +240,11 @@ async function commanders() {
         .option('--check-members', 'Check the allowed members')
         .option('--set-lock-period <period>', 'Set the cooling time', list_line)
         .option('--check-lock-period', 'Check the cooling time')
-        .option('--mint', 'mint an omniverse NFT to the owner account')
+        .option('--nft-mint', 'mint an omniverse NFT to the owner account')
+        .option('--nft-transfer <from>,<to>,<tokenId>', 'transfer an NFT with id `tokenId` from `from` to `to`', list)
+        .option('--nft-burn <from>,<tokenId>', '`from` burns an NFT with id `tokenId`', list)
         .option('--check-nfts <role>', 'Check the NFTs owned by the `role`', list)
-        .option('--claim-NFTs <role>', 'Claim the NFTs held in the shelter owned by the `role`', list)
+        .option('--claim-nfts <role>', 'Claim the NFTs held in the shelter owned by the `role`', list)
         .parse(process.argv);
         
     if (program.opts().setMembers) {
@@ -223,8 +267,8 @@ async function commanders() {
         await checkLockPeriod();
     } else if (program.opts().checkAccounts) {
         await checkSimuAccounts();
-    } else if (program.opts().mint) {
-        await mint();
+    } else if (program.opts().nftMint) {
+        await nftMint();
     } else if (program.opts().checkNfts) {
         if (program.opts().checkNfts.length != 1) {
             console.log('1 arguments are needed, but ' + program.opts().checkNfts.length + ' provided');
@@ -232,13 +276,29 @@ async function commanders() {
         }
 
         await checkNFTs(...program.opts().checkNfts);
-    } else if (program.opts().claimNFTs) {
-        if (program.opts().claimNFTs.length != 1) {
-            console.log('1 arguments are needed, but ' + program.opts().claimNFTs.length + ' provided');
+    } else if (program.opts().claimNfts) {
+        if (program.opts().claimNfts.length != 1) {
+            console.log('1 arguments are needed, but ' + program.opts().claimNfts.length + ' provided');
             return;
         }
 
-        await claimNFTs(...program.opts().claimNFTs);
+        await claimNFTs(...program.opts().claimNfts);
+
+    } else if (program.opts().nftTransfer) {
+        if (program.opts().nftTransfer.length != 3) {
+            console.log('3 arguments are needed, but ' + program.opts().nftTransfer.length + ' provided');
+            return;
+        }
+
+        await nftTransfer(...program.opts().nftTransfer);
+
+    } else if (program.opts().nftBurn) {
+        if (program.opts().nftBurn.length != 2) {
+            console.log('2 arguments are needed, but ' + program.opts().nftBurn.length + ' provided');
+            return;
+        }
+
+        await nftBurn(...program.opts().nftBurn);
     }
 }
 
