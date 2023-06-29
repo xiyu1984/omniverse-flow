@@ -435,9 +435,12 @@ pub contract ERC6358NFTExample: NonFungibleToken, IERC6358Token{
 
         if let shelter = &self.TokenShelter[String.encodeHex(recvPk)] as &[{IERC6358Token.IERC6358TokenExec}]? {
             var idx = shelter.length;
-            log(idx);
             while idx > 0 {
                 idx = idx - 1;
+
+                // log(shelter[idx].getLockedTime());
+                // log(getCurrentBlock().timestamp);
+
                 if (getCurrentBlock().timestamp - shelter[idx].getLockedTime()) > self.getLockPeriod() {
                     let pendedNFT <- shelter.remove(at: idx);
                     recvCollection.omniverseExec(omniToken: <- pendedNFT);

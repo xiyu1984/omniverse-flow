@@ -100,6 +100,12 @@ async function checkSimuAccounts() {
     }
 }
 
+async function sendEmptyTx() {
+    await sendTransaction({flowService: fs_owner, 
+        tx_path: "../transactions/empty.cdc", 
+        args: []});
+}
+
 async function sendOmniverseTransaction(from, to, tokenId, op_type) {
     const opOc = new oc.OmnichainCrypto(keccak256, 'secp256k1', fs_map[from].signerPrivateKeyHex);
 
@@ -252,9 +258,12 @@ async function nftAutoTest() {
     console.log('*****************Before Waiting Time**********************');
     await nftOwnerships();
     await new Promise(resolve => setTimeout(resolve, 15000));
-    console.log('#################After Waiting Time######################');
-    await nftOwnerships();
 
+    console.log('#################After Waiting Time######################');
+
+    await sendEmptyTx();
+
+    await nftOwnerships();
     await new Promise(resolve => setTimeout(resolve, 1000));
     const nftInOwner = await checkNFTs('owner');
     console.log(`-----------------'owner' transfer NFT ${nftInOwner[0]} to 'Alice', NFT ${nftInOwner[1]} to 'Bob'-----------------`);
