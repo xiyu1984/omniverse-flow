@@ -18,7 +18,8 @@
 	  "MetadataViews": "./contracts/MetadataViews.cdc",
     "ERC6358Protocol": "./contracts/ERC6358Protocol.cdc",
     "IERC6358Token": "./contracts/IERC6358Token.cdc",
-    "ERC6358NFTExample": "./contracts/ERC6358NFTExample.cdc"
+    "ERC6358NFTExample": "./contracts/ERC6358NFTExample.cdc",
+	"ERC6358FungibleExample": "./contracts/ERC6358FungibleExample.cdc"
   },
   "networks": {
     "emulator": "127.0.0.1:3569",
@@ -128,7 +129,8 @@
         "MetadataViews",
         "ERC6358Protocol",
         "IERC6358Token",
-        "ERC6358NFTExample"
+        "ERC6358NFTExample",
+		"ERC6358FungibleExample"
       ]
     },
     "testnet": {
@@ -139,7 +141,8 @@
         "MetadataViews",
         "ERC6358Protocol",
         "IERC6358Token",
-        "ERC6358NFTExample"
+        "ERC6358NFTExample",
+		"ERC6358FungibleExample"
       ]
     }
   }

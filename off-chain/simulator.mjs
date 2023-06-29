@@ -203,7 +203,7 @@ async function claimNFTs(account) {
     });
 
     const rst = await settlement(response);
-    console.log(rst.data);
+    console.log(`Claim NFT for ${account}: ${rst.data.statusString}`);
 }
 
 async function checkNFTs(account) {
@@ -211,13 +211,75 @@ async function checkNFTs(account) {
 
     const op_oc = new oc.OmnichainCrypto(keccak256, 'secp256k1', op_fs.signerPrivateKeyHex);
 
-    console.log(await execScripts({
+    const nfts = await execScripts({
         flowService: op_fs,
         script_path: "../scripts/checkNFTs.cdc",
         args: [
             fcl.arg(Array.from(Buffer.from(op_oc.getPublic().substring(2), 'hex')).map((item) => {return String(item)}), types.Array(types.UInt8))
         ]
-    }));
+    });
+
+    // console.log(nfts);
+
+    return nfts;
+}
+
+async function nftOwnerships() {
+    const keys = Object.keys(fs_map);
+
+    for (var idx = 0; idx < keys.length; ++idx) {
+        await claimNFTs(keys[idx]);
+    }
+
+    for (var idx = 0; idx < keys.length; ++idx) {
+        console.log(`NFTs owned by ${keys[idx]}: ${await checkNFTs(keys[idx])}`);
+    }
+}
+
+async function nftAutoTest() {
+    // initialize environment
+    await checkSimuAccounts();
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    await setLockPeriod('10.0');
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    await checkLockPeriod();
+
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    console.log('-----------------Mint two NFTs to `owner`-----------------')
+    await nftMint();
+    await nftMint();
+
+    console.log('*****************Before Waiting Time**********************');
+    await nftOwnerships();
+    await new Promise(resolve => setTimeout(resolve, 15000));
+    console.log('#################After Waiting Time######################');
+    await nftOwnerships();
+
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    const nftInOwner = await checkNFTs('owner');
+    console.log(`-----------------'owner' transfer NFT ${nftInOwner[0]} to 'Alice', NFT ${nftInOwner[1]} to 'Bob'-----------------`);
+    await nftTransfer('owner', 'Alice', nftInOwner[0]);
+    await nftTransfer('owner', 'Bob', nftInOwner[1]);
+
+    console.log('*****************Before Waiting Time**********************');
+    await nftOwnerships();
+    await new Promise(resolve => setTimeout(resolve, 15000));
+    console.log('#################After Waiting Time######################');
+    await nftOwnerships();
+
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    var nftInAlice = await checkNFTs('Alice');
+    var nftInBob = await checkNFTs('Bob');
+    console.log(`-----------------'Alice' transfer NFT ${nftInAlice[0]} to 'Carl'-----------------`);
+    console.log(`-----------------'Bob' burn his NFT ${nftInBob[0]}-----------------`);
+    await nftTransfer('Alice', 'Carl', nftInAlice[0]);
+    await nftBurn('Bob', nftInBob[0]);
+
+    console.log('*****************Before Waiting Time**********************');
+    await nftOwnerships();
+    await new Promise(resolve => setTimeout(resolve, 15000));
+    console.log('#################After Waiting Time######################');
+    await nftOwnerships();
 }
 
 function list(val) {
@@ -245,6 +307,7 @@ async function commanders() {
         .option('--nft-burn <from>,<tokenId>', '`from` burns an NFT with id `tokenId`', list)
         .option('--check-nfts <role>', 'Check the NFTs owned by the `role`', list)
         .option('--claim-nfts <role>', 'Claim the NFTs held in the shelter owned by the `role`', list)
+        .option('--nft-auto-test', 'make the autotest of the ERC-6358 NFTs')
         .parse(process.argv);
         
     if (program.opts().setMembers) {
@@ -275,7 +338,9 @@ async function commanders() {
             return;
         }
 
-        await checkNFTs(...program.opts().checkNfts);
+        const nfts = await checkNFTs(...program.opts().checkNfts);
+        console.log(nfts);
+
     } else if (program.opts().claimNfts) {
         if (program.opts().claimNfts.length != 1) {
             console.log('1 arguments are needed, but ' + program.opts().claimNfts.length + ' provided');
@@ -299,6 +364,8 @@ async function commanders() {
         }
 
         await nftBurn(...program.opts().nftBurn);
+    } else if (program.opts().nftAutoTest) {
+        await nftAutoTest();
     }
 }
 
