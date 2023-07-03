@@ -155,6 +155,34 @@ pub contract ERC6358Protocol {
         }
     }
 
+    pub resource ERC6358Wrapped{
+        pub let nonce: UInt128;
+        pub var token: @AnyResource{IERC6358Token.IERC6358TokenExec}?;
+
+        init(nonce: UInt128, token: @AnyResource{IERC6358Token.IERC6358TokenExec}) {
+            self.nonce = nonce;
+            self.token <-! token;
+        }
+
+        destroy () {
+            destroy <- self.token;
+        }
+
+        access(account) fun extract(): @AnyResource{IERC6358Token.IERC6358TokenExec} {
+            let output <- self.token <- nil;
+
+            return <- output!;
+        }
+
+        pub fun getLockedTime(): UFix64 {
+            if let tokenRef = &self.token as &AnyResource{IERC6358Token.IERC6358TokenExec}? {
+                return tokenRef.getLockedTime();
+            }
+            
+            panic("Wrapped nothing!");
+        }
+    }
+
     init() {
         self._pk2address_map = {};
 
@@ -223,5 +251,9 @@ pub contract ERC6358Protocol {
         }
 
         panic("Cannot find the `pubKey` in the actived omniverse accounts!");
+    }
+
+    access(account) fun createWrapped6358(nonce: UInt128, token: @AnyResource{IERC6358Token.IERC6358TokenExec}): @ERC6358Wrapped {
+        return <- create ERC6358Wrapped(nonce: nonce, token: <- token);
     }
 }
