@@ -32,5 +32,5 @@ flow transactions send ./transactions/createCollection.cdc --signer emulator-Car
 
 # set member and set lock period (for test)
 cd ./off-chain
-node ./simulator.mjs --set-lock-period 30.0
+node ./nft-simulator.mjs --set-lock-period 30.0
 cd ..
